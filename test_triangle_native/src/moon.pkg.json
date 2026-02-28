@@ -1,0 +1,8 @@
+{
+  "is_main": true,
+  "link": {
+    "native": {
+      "cc-link-flags": "-lpthread -ldl"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "targets": {
+    "native": {}
+  },
+  "workspace": {
+    "members": [
+      "src",
+      "test_triangle_native"
+    ]
+  }
+}
