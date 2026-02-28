@@ -3,8 +3,9 @@
 /// Simple triangle rendering using MoonBit Vulkan bindings
 
 // External functions for window and surface management
-extern "C" fn window_init(width : Int, height : Int, title : Int) -> Int = "window_init"
-extern "C" fn surface_create(instance : Int, surface_ptr : Int) -> Int = "surface_create"
+extern "C" fn window_init(width : Int, height : Int, title : String) -> Int = "window_init"
+extern "C" fn surface_create(instance_ptr_idx : Int, surface_ptr_idx : Int) -> Int = "surface_create"
+extern "C" fn get_surface_value() -> Int64 = "get_surface_value"
 extern "C" fn window_poll_events() -> Unit = "window_poll_events"
 extern "C" fn window_should_close() -> Int = "window_should_close"
 extern "C" fn window_cleanup() -> Unit = "window_cleanup"
@@ -23,8 +24,7 @@ fn main() -> Unit {
 
   // Initialize window
   let title = "Vulkan Triangle"
-  let title_ptr = @vulkan.vulkan_create_string(title)
-  let window_ok = window_init(800, 600, title_ptr)
+  let window_ok = window_init(800, 600, title)
 
   if window_ok == 0 {
     println("Failed to initialize window!")
@@ -35,8 +35,8 @@ fn main() -> Unit {
 
   // Step 1: Create Vulkan Instance
   let app_info = @vulkan.alloc_application_info()
-  let name_ptr = @vulkan.vulkan_create_string("Vulkan Triangle")
-  @vulkan.set_application_name(app_info, name_ptr)
+  // Note: We skip setting application name for now since it requires C string handling
+  // @vulkan.set_application_name(app_info, name_ptr)
   @vulkan.set_application_version(app_info, 4206822)
   @vulkan.set_engine_version(app_info, 4206822)
 
@@ -58,26 +58,27 @@ fn main() -> Unit {
 
   // Step 2: Create Surface (using C code)
   let surface_ptr = @vulkan.vulkan_alloc_struct(8)
-  let surface_ok = surface_create(instance, surface_ptr)
+  // Pass the instance_ptr index to surface_create, not the actual instance value
+  let surface_ok = surface_create(instance_ptr, surface_ptr)
 
   if surface_ok == 0 {
     println("Failed to create surface!")
-    @vulkan.vkDestroyInstance(instance, 0)
+    @vulkan.vkDestroyInstance(instance.to_int(), 0)
     window_cleanup()
     return
   }
 
-  let surface = @vulkan.get_int64(surface_ptr, 0)
+  let surface = get_surface_value()
   println("Surface created successfully")
 
   // Step 3: Enumerate physical devices
   let device_count_ptr = @vulkan.vulkan_alloc_struct(8)
-  let enumerate_result = @vulkan.vkEnumeratePhysicalDevices(instance, device_count_ptr, 0)
+  let enumerate_result = @vulkan.vkEnumeratePhysicalDevices(instance.to_int(), device_count_ptr, 0)
 
   if enumerate_result != 0 {
     println("Failed to enumerate physical devices!")
-    @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
-    @vulkan.vkDestroyInstance(instance, 0)
+    @vulkan.vkDestroySurfaceKHR(instance.to_int(), surface.to_int(), 0)
+    @vulkan.vkDestroyInstance(instance.to_int(), 0)
     window_cleanup()
     return
   }
@@ -88,7 +89,7 @@ fn main() -> Unit {
 
   // Step 4: Select first physical device and create logical device
   let physical_devices_ptr = @vulkan.vulkan_alloc_struct(device_count * 8)
-  @vulkan.vkEnumeratePhysicalDevices(instance, device_count_ptr, physical_devices_ptr) |> ignore
+  @vulkan.vkEnumeratePhysicalDevices(instance.to_int(), device_count_ptr, physical_devices_ptr) |> ignore
 
   let physical_device = @vulkan.get_int64(physical_devices_ptr, 0)
   println("Selected physical device:")
@@ -96,12 +97,12 @@ fn main() -> Unit {
 
   // Get queue family properties
   let queue_family_count_ptr = @vulkan.vulkan_alloc_struct(8)
-  @vulkan.vkGetPhysicalDeviceQueueFamilyProperties(physical_device, queue_family_count_ptr, 0)
+  @vulkan.vkGetPhysicalDeviceQueueFamilyProperties(physical_device.to_int(), queue_family_count_ptr, 0)
 
   let queue_family_count = @vulkan.get_int32(queue_family_count_ptr, 0)
   let queue_family_properties_ptr = @vulkan.vulkan_alloc_struct(queue_family_count * 40) // approximate size
 
-  @vulkan.vkGetPhysicalDeviceQueueFamilyProperties(physical_device, queue_family_count_ptr, queue_family_properties_ptr)
+  @vulkan.vkGetPhysicalDeviceQueueFamilyProperties(physical_device.to_int(), queue_family_count_ptr, queue_family_properties_ptr)
 
   // Find a queue family that supports graphics
   let mut graphics_queue_family = -1
@@ -118,7 +119,7 @@ fn main() -> Unit {
 
     // Check presentation support
     let present_support_ptr = @vulkan.vulkan_alloc_struct(4)
-    @vulkan.vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, present_support_ptr) |> ignore
+    @vulkan.vkGetPhysicalDeviceSurfaceSupportKHR(physical_device.to_int(), i, surface.to_int(), present_support_ptr) |> ignore
     let present_support = @vulkan.get_int32(present_support_ptr, 0)
 
     if present_support != 0 && present_queue_family < 0 {
@@ -134,8 +135,8 @@ fn main() -> Unit {
 
   if graphics_queue_family < 0 {
     println("No graphics queue family found!")
-    @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
-    @vulkan.vkDestroyInstance(instance, 0)
+    @vulkan.vkDestroySurfaceKHR(instance.to_int(), surface.to_int(), 0)
+    @vulkan.vkDestroyInstance(instance.to_int(), 0)
     window_cleanup()
     return
   }
@@ -153,8 +154,8 @@ fn main() -> Unit {
   println("")
 
   // Cleanup
-  @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
-  @vulkan.vkDestroyInstance(instance, 0)
+  @vulkan.vkDestroySurfaceKHR(instance.to_int(), surface.to_int(), 0)
+  @vulkan.vkDestroyInstance(instance.to_int(), 0)
   window_cleanup()
   println("Cleanup complete")
 }

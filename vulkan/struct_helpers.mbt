@@ -22,24 +22,24 @@ pub fn alloc_application_info() -> Int {
 
   // Initialize fields
   put_int32(ptr, 0, VK_STRUCTURE_TYPE_APPLICATION_INFO)       // sType
-  put_int64(ptr, 8, 0)                                        // pNext
-  put_int64(ptr, 16, 0)                                       // pApplicationName
+  put_ptr(ptr, 8, -1)                                         // pNext (NULL = -1)
+  put_ptr(ptr, 16, -1)                                        // pApplicationName (NULL = -1)
   put_int32(ptr, 24, 0)                                       // applicationVersion
-  put_int64(ptr, 32, 0)                                       // pEngineName
+  put_ptr(ptr, 32, -1)                                        // pEngineName (NULL = -1)
   put_int32(ptr, 40, 0)                                       // engineVersion
-  put_int32(ptr, 48, 4206822)                                 // apiVersion (1.3.0)
+  put_int32(ptr, 44, 4206822)                                 // apiVersion (1.3.0)
 
   ptr
 }
 
-// Set application name (simplified - just stores pointer)
-pub fn set_application_name(app_info : Int, name : Int) -> Unit {
-  put_int64(app_info, 16, name)
+// Set application name (simplified - just stores pointer index)
+pub fn set_application_name(app_info : Int, name_idx : Int) -> Unit {
+  put_ptr(app_info, 16, name_idx)
 }
 
-// Set engine name (simplified - just stores pointer)
-pub fn set_engine_name(app_info : Int, name : Int) -> Unit {
-  put_int64(app_info, 32, name)
+// Set engine name (simplified - just stores pointer index)
+pub fn set_engine_name(app_info : Int, name_idx : Int) -> Unit {
+  put_ptr(app_info, 32, name_idx)
 }
 
 // Set application version
@@ -59,26 +59,26 @@ pub fn alloc_instance_create_info() -> Int {
 
   // Initialize fields
   put_int32(ptr, 0, VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)   // sType
-  put_int64(ptr, 8, 0)                                        // pNext
-  put_int32(ptr, 16, 0)                                       // flags
-  put_int64(ptr, 24, 0)                                       // pApplicationInfo
-  put_int32(ptr, 32, 0)                                       // enabledLayerCount
-  put_int64(ptr, 40, 0)                                       // ppEnabledLayerNames
-  put_int32(ptr, 48, 0)                                       // enabledExtensionCount
-  put_int64(ptr, 56, 0)                                       // ppEnabledExtensionNames
+  put_ptr(ptr, 8, -1)                                           // pNext (NULL = -1)
+  put_int32(ptr, 16, 0)                                        // flags
+  put_ptr(ptr, 24, -1)                                          // pApplicationInfo (NULL = -1)
+  put_int32(ptr, 32, 0)                                        // enabledLayerCount
+  put_ptr(ptr, 40, -1)                                          // ppEnabledLayerNames (NULL = -1)
+  put_int32(ptr, 48, 0)                                        // enabledExtensionCount
+  put_ptr(ptr, 56, -1)                                          // ppEnabledExtensionNames (NULL = -1)
 
   ptr
 }
 
-// Set application info in instance create info
-pub fn set_instance_app_info(create_info : Int, app_info : Int) -> Unit {
-  put_int64(create_info, 24, app_info)
+// Set application info in instance create info (using index)
+pub fn set_instance_app_info(create_info : Int, app_info_idx : Int) -> Unit {
+  put_ptr(create_info, 24, app_info_idx)
 }
 
-// Enable extensions in instance create info
-pub fn set_instance_extensions(create_info : Int, count : Int, names : Int) -> Unit {
+// Enable extensions in instance create info (using index)
+pub fn set_instance_extensions(create_info : Int, count : Int, names_idx : Int) -> Unit {
   put_int32(create_info, 48, count)
-  put_int64(create_info, 56, names)
+  put_ptr(create_info, 56, names_idx)
 }
 
 // Allocate and initialize VkDeviceQueueCreateInfo
@@ -192,8 +192,9 @@ pub fn set_swapchain_min_image_count(create_info : Int, count : Int) -> Unit {
 // Memory access helpers (using C functions)
 pub extern "C" fn put_int32(ptr : Int, offset : Int, value : Int) -> Unit = "vulkan_put_int32"
 pub extern "C" fn put_int64(ptr : Int, offset : Int, value : Int) -> Unit = "vulkan_put_int64"
+pub extern "C" fn put_ptr(ptr : Int, offset : Int, ptr_idx : Int) -> Unit = "vulkan_set_ptr"
 pub extern "C" fn get_int32(ptr : Int, offset : Int) -> Int = "vulkan_get_int32"
-pub extern "C" fn get_int64(ptr : Int, offset : Int) -> Int = "vulkan_get_int64"
+pub extern "C" fn get_int64(ptr : Int, offset : Int) -> Int64 = "vulkan_get_int64"
 
 // Utility function to create string for Vulkan
 pub extern "C" fn vulkan_create_string(s : String) -> Int = "vulkan_create_string"
