@@ -18,22 +18,61 @@ WindowContext g_window_context = {0};
 
 // Custom memory allocation functions for MoonBit FFI
 void* vulkan_alloc(size_t size) {
-    return malloc(size);
+    void* ptr = malloc(size);
+    fprintf(stderr, "[DEBUG] vulkan_alloc: size=%zu, ptr=%p\n", size, ptr);
+    return ptr;
 }
 
 void vulkan_free(void* ptr) {
     if (ptr) {
+        fprintf(stderr, "[DEBUG] vulkan_free: ptr=%p\n", ptr);
         free(ptr);
     }
 }
 
+// Memory access helpers for Vulkan structures
+// Note: ptr is passed as int64_t to handle 64-bit pointers
+void vulkan_put_int32(int64_t ptr, int32_t offset, int32_t value) {
+    fprintf(stderr, "[DEBUG] put_int32: ptr=%p, offset=%d, value=%d\n", (void*)ptr, offset, value);
+    if (ptr) {
+        *(int32_t*)((uint8_t*)ptr + offset) = value;
+    }
+}
+
+void vulkan_put_int64(int64_t ptr, int32_t offset, int64_t value) {
+    fprintf(stderr, "[DEBUG] put_int64: ptr=%p, offset=%d, value=%ld\n", (void*)ptr, offset, value);
+    if (ptr) {
+        *(int64_t*)((uint8_t*)ptr + offset) = value;
+    }
+}
+
+int32_t vulkan_get_int32(int64_t ptr, int32_t offset) {
+    fprintf(stderr, "[DEBUG] get_int32: ptr=%p, offset=%d\n", (void*)ptr, offset);
+    if (ptr) {
+        return *(int32_t*)((uint8_t*)ptr + offset);
+    }
+    return 0;
+}
+
+int64_t vulkan_get_int64(int64_t ptr, int32_t offset) {
+    fprintf(stderr, "[DEBUG] get_int64: ptr=%p, offset=%d\n", (void*)ptr, offset);
+    if (ptr) {
+        return *(int64_t*)((uint8_t*)ptr + offset);
+    }
+    return 0;
+}
+
 // Create X11 window and Vulkan surface
 int32_t moonbit_create_window(int32_t width, int32_t height) {
+    fprintf(stderr, "[DEBUG] Creating window: %dx%d\n", width, height);
+
     g_window_context.display = XOpenDisplay(NULL);
     if (!g_window_context.display) {
         fprintf(stderr, "Failed to open X11 display\n");
         return -1;
     }
+
+    fprintf(stderr, "[DEBUG] X11 display opened\n");
 
     Window root = DefaultRootWindow(g_window_context.display);
     XSetWindowAttributes swa = {0};
@@ -46,12 +85,16 @@ int32_t moonbit_create_window(int32_t width, int32_t height) {
         CWEventMask, &swa
     );
 
+    fprintf(stderr, "[DEBUG] Window created\n");
+
     XMapWindow(g_window_context.display, g_window_context.window);
     XStoreName(g_window_context.display, g_window_context.window, "Vulkan Triangle - MoonBit");
     XFlush(g_window_context.display);
 
     g_window_context.width = width;
     g_window_context.height = height;
+
+    fprintf(stderr, "[DEBUG] Window setup complete\n");
 
     return 0;
 }
