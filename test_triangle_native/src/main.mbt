@@ -86,38 +86,3 @@ fn create_vulkan_instance() -> Int {
     return 0
   }
 }
-
-fn create_vulkan_surface(instance : Int) -> Int {
-  let surface = vulkan_alloc(8)
-  // let result = vkCreateSurfaceKHR(instance, 0, 0, surface)
-
-  // For now, return 0 since surface requires additional setup
-  vulkan_free(surface)
-  return 0
-}
-
-fn get_physical_device(instance : Int) -> Int {
-  let count = vulkan_alloc(8)
-  let result = vkEnumeratePhysicalDevices(instance, count, 0)
-
-  if result != 0 {
-    vulkan_free(count)
-    return 0
-  }
-
-  // Simplified: return 0 since we can't properly read the count
-  vulkan_free(count)
-  return 0
-}
-
-fn create_logical_device(physical_device : Int) -> Int {
-  let device = vulkan_alloc(8)
-  let result = vkCreateDevice(physical_device, 0, 0, device)
-
-  if result == 0 {
-    return device
-  } else {
-    vulkan_free(device)
-    return 0
-  }
-}
