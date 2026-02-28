@@ -1,8 +1,9 @@
-// Temporary C stub for basic FFI linking
-// Will be replaced with proper Vulkan bindings in subsequent steps
+// Vulkan C FFI Bridge for MoonBit
+// Direct bindings to Vulkan C API for MoonBit
 
 #include <vulkan/vulkan.h>
 #include <moonbit.h>
 
-// Placeholder for future FFI stub functions
-// This file is just for initial build verification
+// All Vulkan handles are passed as void* pointers (MoonBit #external type)
+// All Vulkan structures are passed as void* pointers
+// VkResult is returned as int32_t

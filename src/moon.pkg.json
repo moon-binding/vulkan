@@ -4,5 +4,6 @@
     "native": {
       "cc-link-flags": "-lvulkan -ldl -lpthread"
     }
-  }
+  },
+  "native-stub": ["vulkan_ffi.c"]
 }
