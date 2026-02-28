@@ -3,10 +3,10 @@
 /// This module provides the fundamental Vulkan API bindings
 /// without abstraction, mapping directly to Vulkan C API.
 
-pub type VkBool32 = Int
+pub const VK_TRUE : Int = 1
+pub const VK_FALSE : Int = 0
+
 pub type VkFlags = Int
-pub type VkDeviceSize = Int64
-pub type VkSampleMask = Int
 
 // Vulkan Result codes
 pub enum VkResult {

@@ -24,8 +24,6 @@ pub const VK_WHOLE_SIZE : Int = -1
 
 // Special constants (use Int for compatibility)
 pub const VK_ATTACHMENT_UNUSED : Int = -1
-pub const VK_TRUE : Int = 1
-pub const VK_FALSE : Int = 0
 pub const VK_QUEUE_FAMILY_IGNORED : Int = -1
 pub const VK_REMAINING_MIP_LEVELS : Int = -1
 pub const VK_REMAINING_ARRAY_LAYERS : Int = -1

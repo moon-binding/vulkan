@@ -1,0 +1,19 @@
+# MoonBit build output
+_build/
+
+# MoonBit lock file
+.moon-lock
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Example build artifacts
+example/_build/

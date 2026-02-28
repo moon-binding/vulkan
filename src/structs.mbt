@@ -4,43 +4,43 @@
 
 // 2D Extent
 pub struct VkExtent2D {
-  width : UInt32
-  height : UInt32
+  width : Int
+  height : Int
 }
 
-pub fn VkExtent2D_make(width : UInt32, height : UInt32) -> VkExtent2D {
+pub fn extent_2d(width : Int, height : Int) -> VkExtent2D {
   { width: width, height: height }
 }
 
 // 3D Extent
 pub struct VkExtent3D {
-  width : UInt32
-  height : UInt32
-  depth : UInt32
+  width : Int
+  height : Int
+  depth : Int
 }
 
-pub fn VkExtent3D_make(width : UInt32, height : UInt32, depth : UInt32) -> VkExtent3D {
+pub fn extent_3d(width : Int, height : Int, depth : Int) -> VkExtent3D {
   { width: width, height: height, depth: depth }
 }
 
 // 2D Offset
 pub struct VkOffset2D {
-  x : Int32
-  y : Int32
+  x : Int
+  y : Int
 }
 
-pub fn VkOffset2D_make(x : Int32, y : Int32) -> VkOffset2D {
+pub fn offset_2d(x : Int, y : Int) -> VkOffset2D {
   { x: x, y: y }
 }
 
 // 3D Offset
 pub struct VkOffset3D {
-  x : Int32
-  y : Int32
-  z : Int32
+  x : Int
+  y : Int
+  z : Int
 }
 
-pub fn VkOffset3D_make(x : Int32, y : Int32, z : Int32) -> VkOffset3D {
+pub fn offset_3d(x : Int, y : Int, z : Int) -> VkOffset3D {
   { x: x, y: y, z: z }
 }
 
@@ -54,7 +54,7 @@ pub struct VkViewport {
   maxDepth : Float
 }
 
-pub fn VkViewport_make(x : Float, y : Float, width : Float, height : Float, minDepth : Float, maxDepth : Float) -> VkViewport {
+pub fn viewport(x : Float, y : Float, width : Float, height : Float, minDepth : Float, maxDepth : Float) -> VkViewport {
   { x: x, y: y, width: width, height: height, minDepth: minDepth, maxDepth: maxDepth }
 }
 
@@ -64,24 +64,24 @@ pub struct VkRect2D {
   extent : VkExtent2D
 }
 
-pub fn VkRect2D_make(offset : VkOffset2D, extent : VkExtent2D) -> VkRect2D {
+pub fn rect_2d(offset : VkOffset2D, extent : VkExtent2D) -> VkRect2D {
   { offset: offset, extent: extent }
 }
 
 // Clear color value
 pub type VkClearColorValue = Array[Float]
 
-pub fn VkClearColorValue_make(r : Float, g : Float, b : Float, a : Float) -> VkClearColorValue {
+pub fn clear_color_value(r : Float, g : Float, b : Float, a : Float) -> VkClearColorValue {
   [r, g, b, a]
 }
 
 // Clear depth stencil value
 pub struct VkClearDepthStencilValue {
   depth : Float
-  stencil : UInt32
+  stencil : Int
 }
 
-pub fn VkClearDepthStencilValue_make(depth : Float, stencil : UInt32) -> VkClearDepthStencilValue {
+pub fn clear_depth_stencil_value(depth : Float, stencil : Int) -> VkClearDepthStencilValue {
   { depth: depth, stencil: stencil }
 }
 
@@ -91,10 +91,10 @@ pub struct VkClearValue {
   depthStencil : VkClearDepthStencilValue
 }
 
-pub fn VkClearValue_color(color : Array[Float]) -> VkClearValue {
-  { color: color, depthStencil: VkClearDepthStencilValue_make(0.0, 0) }
+pub fn clear_value_color(color : Array[Float]) -> VkClearValue {
+  { color: color, depthStencil: clear_depth_stencil_value(0.0, 0) }
 }
 
-pub fn VkClearValue_depthStencil(depth : Float, stencil : UInt32) -> VkClearValue {
-  { color: [0.0, 0.0, 0.0, 0.0], depthStencil: VkClearDepthStencilValue_make(depth, stencil) }
+pub fn clear_value_depth_stencil(depth : Float, stencil : Int) -> VkClearValue {
+  { color: [0.0, 0.0, 0.0, 0.0], depthStencil: clear_depth_stencil_value(depth, stencil) }
 }

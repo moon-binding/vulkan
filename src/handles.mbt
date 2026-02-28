@@ -1,74 +1,82 @@
 ///|
 /// MoonBit Vulkan SDK Bindings - Handle Types
-/// Vulkan handle types are opaque pointers used to reference Vulkan objects.
+/// Vulkan handle types are opaque types for Vulkan objects
+
+// Note: Using Int for all handle types to represent opaque pointers
+// In native compilation, these are mapped to void* in C
 
 // Instance handles
-#external type VkInstance
-#external type VkPhysicalDevice
+pub type VkInstance = Int
+pub type VkPhysicalDevice = Int
 
 // Device handles
-#external type VkDevice
-#external type VkQueue
+pub type VkDevice = Int
+pub type VkQueue = Int
 
 // Command buffer handles
-#external type VkCommandPool
-#external type VkCommandBuffer
+pub type VkCommandPool = Int
+pub type VkCommandBuffer = Int
 
 // Memory handles
-#external type VkDeviceMemory
+pub type VkDeviceMemory = Int
 
 // Buffer handles
-#external type VkBuffer
+pub type VkBuffer = Int
 
 // Image handles
-#external type VkImage
+pub type VkImage = Int
 
 // Image view handles
-#external type VkImageView
+pub type VkImageView = Int
 
 // Shader handles
-#external type VkShaderModule
+pub type VkShaderModule = Int
 
 // Pipeline handles
-#external type VkPipeline
-#external type VkPipelineLayout
-#external type VkPipelineCache
+pub type VkPipeline = Int
+pub type VkPipelineLayout = Int
+pub type VkPipelineCache = Int
 
 // Render pass handles
-#external type VkRenderPass
+pub type VkRenderPass = Int
 
 // Framebuffer handles
-#external type VkFramebuffer
+pub type VkFramebuffer = Int
 
 // Descriptor handles
-#external type VkDescriptorPool
-#external type VkDescriptorSet
-#external type VkDescriptorSetLayout
+pub type VkDescriptorPool = Int
+pub type VkDescriptorSet = Int
+pub type VkDescriptorSetLayout = Int
 
 // Query pool handles
-#external type VkQueryPool
+pub type VkQueryPool = Int
 
 // Buffer view handles
-#external type VkBufferView
+pub type VkBufferView = Int
 
 // Sampler handles
-#external type VkSampler
+pub type VkSampler = Int
 
 // Fence handles
-#external type VkFence
+pub type VkFence = Int
 
 // Semaphore handles
-#external type VkSemaphore
+pub type VkSemaphore = Int
 
 // Event handles
-#external type VkEvent
+pub type VkEvent = Int
 
 // Surface handles
-#external type VkSurfaceKHR
+pub type VkSurfaceKHR = Int
 
 // Swapchain handles
-#external type VkSwapchainKHR
+pub type VkSwapchainKHR = Int
 
 // Debug handles
-#external type VkDebugReportCallbackEXT
-#external type VkDebugUtilsMessengerEXT
+pub type VkDebugReportCallbackEXT = Int
+pub type VkDebugUtilsMessengerEXT = Int
+
+// Null handle helper - returns 0 as a null handle
+pub fn null_handle() -> Int {
+  0
+}
