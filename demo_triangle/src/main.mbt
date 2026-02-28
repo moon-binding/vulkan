@@ -213,9 +213,17 @@ fn main() -> Unit {
   println("")
 
   // Cleanup
+  println("Starting cleanup...")
   @vulkan.vkDestroyDevice(device, 0)
-  @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
+  println("Device destroyed")
+
+  // Cleanup window and surface BEFORE destroying instance
+  window_cleanup()  // This will destroy the surface
+  println("Window and surface cleaned up")
+
+  // Now safe to destroy the instance
   @vulkan.vkDestroyInstance(instance, 0)
-  window_cleanup()
+  println("Instance destroyed")
+
   println("Cleanup complete")
 }
