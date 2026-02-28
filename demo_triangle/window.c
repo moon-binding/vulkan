@@ -72,20 +72,11 @@ int32_t window_init(int32_t width, int32_t height, const char* title) {
     return 1;
 }
 
-// Get the created surface value
-int64_t get_surface_value(void) {
-    return (int64_t)(uintptr_t)g_surface;
-}
-
 // Create Vulkan surface
-int32_t surface_create(int32_t instance_buffer_idx, int32_t surface_buffer_idx) {
-    // Get instance from buffer using vulkan_get_int64 from vulkan_ffi.c
-    extern int64_t vulkan_get_int64(int32_t idx, int32_t offset);
+int32_t surface_create(int64_t instance, int32_t surface_buffer_idx) {
     extern void vulkan_put_int64(int32_t idx, int32_t offset, int64_t value);
 
-    int64_t instance_val = vulkan_get_int64(instance_buffer_idx, 0);
-
-    g_instance = (VkInstance)(uintptr_t)instance_val;
+    g_instance = (VkInstance)(uintptr_t)instance;
 
     VkResult result = glfwCreateWindowSurface(g_instance, g_window, NULL, &g_surface);
     if (result != VK_SUCCESS) {

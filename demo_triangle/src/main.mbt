@@ -6,8 +6,7 @@
 extern "C" fn window_init(width : Int, height : Int, title : String) -> Int = "window_init"
 extern "C" fn get_required_extensions_count() -> Int = "get_required_extensions_count"
 extern "C" fn copy_required_extensions(names_ptr : Int) -> Unit = "copy_required_extensions"
-extern "C" fn surface_create(instance_ptr_idx : Int, surface_ptr_idx : Int) -> Int = "surface_create"
-extern "C" fn get_surface_value() -> Int64 = "get_surface_value"
+extern "C" fn surface_create(instance : Int64, surface_ptr_idx : Int) -> Int = "surface_create"
 extern "C" fn window_poll_events() -> Unit = "window_poll_events"
 extern "C" fn window_should_close() -> Int = "window_should_close"
 extern "C" fn window_cleanup() -> Unit = "window_cleanup"
@@ -78,27 +77,27 @@ fn main() -> Unit {
 
   // Step 2: Create Surface (using C code)
   let surface_ptr = @vulkan.vulkan_alloc_struct(8)
-  // Pass the instance_ptr index to surface_create, not the actual instance value
-  let surface_ok = surface_create(instance_ptr, surface_ptr)
+  // Pass the instance value directly to surface_create
+  let surface_ok = surface_create(instance, surface_ptr)
 
   if surface_ok == 0 {
     println("Failed to create surface!")
-    @vulkan.vkDestroyInstance(instance_ptr, 0)
+    @vulkan.vkDestroyInstance(instance, 0)
     window_cleanup()
     return
   }
 
-  let surface = get_surface_value()
-  println("Surface created successfully")
+  let surface = @vulkan.get_int64(surface_ptr, 0)
+  println("Surface created successfully, value: " + surface.to_string())
 
   // Step 3: Enumerate physical devices
   let device_count_ptr = @vulkan.vulkan_alloc_struct(8)
-  let enumerate_result = @vulkan.vkEnumeratePhysicalDevices(instance_ptr, device_count_ptr, 0)
+  let enumerate_result = @vulkan.vkEnumeratePhysicalDevices(instance, device_count_ptr, 0)
 
   if enumerate_result != 0 {
     println("Failed to enumerate physical devices!")
-    @vulkan.vkDestroySurfaceKHR(instance_ptr, surface_ptr, 0)
-    @vulkan.vkDestroyInstance(instance_ptr, 0)
+    @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
+    @vulkan.vkDestroyInstance(instance, 0)
     window_cleanup()
     return
   }
@@ -109,7 +108,7 @@ fn main() -> Unit {
 
   // Step 4: Select first physical device and create logical device
   let physical_devices_ptr = @vulkan.vulkan_alloc_struct(device_count * 8)
-  @vulkan.vkEnumeratePhysicalDevices(instance_ptr, device_count_ptr, physical_devices_ptr) |> ignore
+  @vulkan.vkEnumeratePhysicalDevices(instance, device_count_ptr, physical_devices_ptr) |> ignore
 
   let physical_device = @vulkan.get_int64(physical_devices_ptr, 0)
   println("Selected physical device:")
@@ -142,7 +141,7 @@ fn main() -> Unit {
 
     // Check presentation support
     let present_support_ptr = @vulkan.vulkan_alloc_struct(4)
-    @vulkan.vkGetPhysicalDeviceSurfaceSupportKHRArray(physical_devices_ptr, 0, i, surface_ptr, present_support_ptr) |> ignore
+    @vulkan.vkGetPhysicalDeviceSurfaceSupportKHRArray(physical_devices_ptr, 0, i, surface, present_support_ptr) |> ignore
     let present_support = @vulkan.get_int32(present_support_ptr, 0)
 
     if present_support != 0 && present_queue_family < 0 {
@@ -158,8 +157,8 @@ fn main() -> Unit {
 
   if graphics_queue_family < 0 {
     println("No graphics queue family found!")
-    @vulkan.vkDestroySurfaceKHR(instance_ptr, surface_ptr, 0)
-    @vulkan.vkDestroyInstance(instance_ptr, 0)
+    @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
+    @vulkan.vkDestroyInstance(instance, 0)
     window_cleanup()
     return
   }
@@ -179,17 +178,20 @@ fn main() -> Unit {
 
   if device_result != 0 {
     println("Failed to create logical device! Result: " + device_result.to_string())
-    @vulkan.vkDestroySurfaceKHR(instance_ptr, surface_ptr, 0)
-    @vulkan.vkDestroyInstance(instance_ptr, 0)
+    @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
+    @vulkan.vkDestroyInstance(instance, 0)
     window_cleanup()
     return
   }
 
   println("Logical device created successfully")
 
+  // Get device handle
+  let device = @vulkan.get_int64(device_ptr, 0)
+
   // Get graphics queue
   let queue_ptr = @vulkan.vulkan_alloc_struct(8)
-  @vulkan.vkGetDeviceQueueArray(device_ptr, graphics_queue_family, 0, queue_ptr)
+  @vulkan.vkGetDeviceQueueArray(device, graphics_queue_family, 0, queue_ptr)
   let graphics_queue = @vulkan.get_int64(queue_ptr, 0)
 
   println("Graphics queue handle: " + graphics_queue.to_string())
@@ -202,9 +204,9 @@ fn main() -> Unit {
   println("")
 
   // Cleanup
-  @vulkan.vkDestroyDevice(device_ptr, 0)
-  @vulkan.vkDestroySurfaceKHR(instance_ptr, surface_ptr, 0)
-  @vulkan.vkDestroyInstance(instance_ptr, 0)
+  @vulkan.vkDestroyDevice(device, 0)
+  @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
+  @vulkan.vkDestroyInstance(instance, 0)
   window_cleanup()
   println("Cleanup complete")
 }
