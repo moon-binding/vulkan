@@ -81,6 +81,8 @@ int64_t get_surface_value(void) {
 int32_t surface_create(int32_t instance_buffer_idx, int32_t surface_buffer_idx) {
     // Get instance from buffer using vulkan_get_int64 from vulkan_ffi.c
     extern int64_t vulkan_get_int64(int32_t idx, int32_t offset);
+    extern void vulkan_put_int64(int32_t idx, int32_t offset, int64_t value);
+
     int64_t instance_val = vulkan_get_int64(instance_buffer_idx, 0);
 
     g_instance = (VkInstance)(uintptr_t)instance_val;
@@ -90,6 +92,10 @@ int32_t surface_create(int32_t instance_buffer_idx, int32_t surface_buffer_idx) 
         fprintf(stderr, "Failed to create window surface (error: %d)\n", result);
         return 0;
     }
+
+    // Write the surface handle to the buffer
+    int64_t surface_val = (int64_t)(uintptr_t)g_surface;
+    vulkan_put_int64(surface_buffer_idx, 0, surface_val);
 
     printf("Surface created successfully\n");
     return 1;
@@ -126,22 +132,33 @@ void window_cleanup(void) {
     printf("Window and surface cleaned up\n");
 }
 
-// Get required instance extensions
-int32_t get_required_extensions(int32_t* count, const char*** extensions) {
-    *extensions = glfwGetRequiredInstanceExtensions((uint32_t*)count);
-    return (*extensions != NULL) ? 1 : 0;
+// Get required instance extensions count
+int32_t get_required_extensions_count(void) {
+    uint32_t count = 0;
+    glfwGetRequiredInstanceExtensions(&count);
+    return (int32_t)count;
 }
 
-// Copy extension names to an array (for MoonBit)
-int32_t copy_extensions(const char** src, int32_t count, int64_t* dst) {
-    for (int32_t i = 0; i < count; i++) {
-        size_t len = strlen(src[i]);
-        char* str = malloc(len + 1);
-        if (!str) return 0;
-        strcpy(str, src[i]);
-        dst[i] = (int64_t)(uintptr_t)str;
+// Copy required extensions to MoonBit buffer
+void copy_required_extensions(int32_t extensions_idx) {
+    extern int64_t vulkan_get_int64(int32_t idx, int32_t offset);
+    extern void vulkan_put_int64(int32_t idx, int32_t offset, int64_t value);
+
+    uint32_t count = 0;
+    const char** extensions = glfwGetRequiredInstanceExtensions(&count);
+
+    // Allocate a buffer in C to hold the extension pointers
+    const char** ext_buffer = malloc(count * sizeof(const char*));
+    for (uint32_t i = 0; i < count; i++) {
+        ext_buffer[i] = extensions[i];
     }
-    return 1;
+
+    // Store each extension pointer in the MoonBit buffer at appropriate offsets
+    for (uint32_t i = 0; i < count; i++) {
+        int64_t ptr_value = (int64_t)(uintptr_t)ext_buffer[i];
+        int32_t offset = i * 8;  // Each pointer is 8 bytes
+        vulkan_put_int64(extensions_idx, offset, ptr_value);
+    }
 }
 
 // Get shader data pointers

@@ -56,10 +56,19 @@ void vulkan_put_int32(int32_t idx, int32_t offset, int32_t value) {
     }
 }
 
-void vulkan_put_int64(int32_t idx, int32_t offset, int32_t value) {
+void vulkan_put_int64(int32_t idx, int32_t offset, int64_t value) {
     void* ptr = index_to_ptr(idx);
     if (ptr) {
-        *(int32_t*)((uint8_t*)ptr + offset) = value;
+        *(int64_t*)((uint8_t*)ptr + offset) = value;
+    }
+}
+
+// Put int64 value from low/high parts (for MoonBit Int64)
+void vulkan_put_int64_lh(int32_t idx, int32_t offset, int32_t low, int32_t high) {
+    void* ptr = index_to_ptr(idx);
+    if (ptr) {
+        uint64_t value = ((uint64_t)(uint32_t)high << 32) | (uint64_t)(uint32_t)low;
+        *(int64_t*)((uint8_t*)ptr + offset) = (int64_t)value;
     }
 }
 
@@ -147,44 +156,111 @@ void vulkan_set_ptr(int32_t idx, int32_t offset, int32_t ptr_idx) {
 int32_t vulkan_vkCreateInstance(int32_t create_info_idx, int32_t allocator, int32_t instance_idx) {
     void* create_info = index_to_ptr(create_info_idx);
     void* instance_ptr = index_to_ptr(instance_idx);
+
+    printf("DEBUG: vkCreateInstance called\n");
+
+    if (create_info) {
+        const VkInstanceCreateInfo* ci = (const VkInstanceCreateInfo*)create_info;
+        printf("  enabledExtensionCount: %u\n", ci->enabledExtensionCount);
+        if (ci->ppEnabledExtensionNames && ci->enabledExtensionCount > 0) {
+            for (uint32_t i = 0; i < ci->enabledExtensionCount; i++) {
+                printf("    Extension %u: %s\n", i, ci->ppEnabledExtensionNames[i]);
+            }
+        }
+    }
+
+    fflush(stdout);
+
     VkResult result = vkCreateInstance((const VkInstanceCreateInfo*)create_info, NULL, (VkInstance*)instance_ptr);
+
+    printf("  Result: %d\n", result);
+    fflush(stdout);
+
     return (int32_t)result;
 }
 
-// vkDestroyInstance wrapper
+// vkDestroyInstance wrapper - accepts index of buffer containing instance handle
 void vulkan_vkDestroyInstance(int32_t instance_idx, int32_t allocator) {
-    VkInstance instance = (VkInstance)index_to_ptr(instance_idx);
-    vkDestroyInstance(instance, NULL);
+    void* instance_buffer = index_to_ptr(instance_idx);
+    if (instance_buffer) {
+        VkInstance instance = *(VkInstance*)instance_buffer;
+        vkDestroyInstance(instance, NULL);
+    }
 }
 
-// vkEnumeratePhysicalDevices wrapper
+// vkEnumeratePhysicalDevices wrapper - accepts index of buffer containing instance handle
 int32_t vulkan_vkEnumeratePhysicalDevices(int32_t instance_idx, int32_t count_idx, int32_t devices_idx) {
-    VkInstance instance = (VkInstance)index_to_ptr(instance_idx);
+    void* instance_buffer = index_to_ptr(instance_idx);
+    VkInstance instance = instance_buffer ? *(VkInstance*)instance_buffer : NULL;
     uint32_t* count_ptr = index_to_ptr(count_idx);
     VkPhysicalDevice* devices_ptr = index_to_ptr(devices_idx);
-    return (int32_t)vkEnumeratePhysicalDevices(instance, count_ptr, devices_ptr);
+
+    VkResult result = vkEnumeratePhysicalDevices(instance, count_ptr, devices_ptr);
+
+    return (int32_t)result;
 }
 
-// vkGetPhysicalDeviceQueueFamilyProperties wrapper
+// vkGetPhysicalDeviceQueueFamilyProperties wrapper - accepts index of buffer containing device handle
 void vulkan_vkGetPhysicalDeviceQueueFamilyProperties(int32_t device_idx, int32_t count_idx, int32_t props_idx) {
-    VkPhysicalDevice device = (VkPhysicalDevice)index_to_ptr(device_idx);
+    void* device_buffer = index_to_ptr(device_idx);
+    VkPhysicalDevice device = device_buffer ? *(VkPhysicalDevice*)device_buffer : NULL;
+    uint32_t* count_ptr = index_to_ptr(count_idx);
+    VkQueueFamilyProperties* props_ptr = index_to_ptr(props_idx);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, count_ptr, props_ptr);
+}
+
+// vkGetPhysicalDeviceQueueFamilyProperties wrapper - accepts array index and device index
+void vulkan_vkGetPhysicalDeviceQueueFamilyPropertiesArray(int32_t devices_idx, int32_t device_index, int32_t count_idx, int32_t props_idx) {
+    void* devices_buffer = index_to_ptr(devices_idx);
+    VkPhysicalDevice device = NULL;
+    if (devices_buffer) {
+        VkPhysicalDevice* devices = (VkPhysicalDevice*)devices_buffer;
+        device = devices[device_index];
+    }
     uint32_t* count_ptr = index_to_ptr(count_idx);
     VkQueueFamilyProperties* props_ptr = index_to_ptr(props_idx);
     vkGetPhysicalDeviceQueueFamilyProperties(device, count_ptr, props_ptr);
 }
 
 // vkGetPhysicalDeviceSurfaceSupportKHR wrapper
-int32_t vulkan_vkGetPhysicalDeviceSurfaceSupportKHR(int32_t device_idx, int32_t index, int32_t surface, int32_t support_idx) {
-    VkPhysicalDevice device = (VkPhysicalDevice)index_to_ptr(device_idx);
-    VkSurfaceKHR surf = (VkSurfaceKHR)(uintptr_t)surface;
+int32_t vulkan_vkGetPhysicalDeviceSurfaceSupportKHR(int32_t device_idx, int32_t index, int32_t surface_idx, int32_t support_idx) {
+    void* device_buffer = index_to_ptr(device_idx);
+    VkPhysicalDevice device = device_buffer ? *(VkPhysicalDevice*)device_buffer : NULL;
+
+    void* surface_buffer = index_to_ptr(surface_idx);
+    VkSurfaceKHR surf = surface_buffer ? *(VkSurfaceKHR*)surface_buffer : (VkSurfaceKHR)(uintptr_t)surface_idx;
+
     VkBool32* support_ptr = index_to_ptr(support_idx);
     return (int32_t)vkGetPhysicalDeviceSurfaceSupportKHR(device, index, surf, support_ptr);
 }
 
+// vkGetPhysicalDeviceSurfaceSupportKHR wrapper - accepts array index and device index
+int32_t vulkan_vkGetPhysicalDeviceSurfaceSupportKHRArray(int32_t devices_idx, int32_t device_index, int32_t index, int32_t surface_idx, int32_t support_idx) {
+    void* devices_buffer = index_to_ptr(devices_idx);
+    VkPhysicalDevice device = NULL;
+    if (devices_buffer) {
+        VkPhysicalDevice* devices = (VkPhysicalDevice*)devices_buffer;
+        device = devices[device_index];
+    }
+
+    void* surface_buffer = index_to_ptr(surface_idx);
+    VkSurfaceKHR surf = surface_buffer ? *(VkSurfaceKHR*)surface_buffer : (VkSurfaceKHR)(uintptr_t)surface_idx;
+
+    VkBool32* support_ptr = index_to_ptr(support_idx);
+
+    VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(device, index, surf, support_ptr);
+
+    return (int32_t)result;
+}
+
 // vkDestroySurfaceKHR wrapper
-void vulkan_vkDestroySurfaceKHR(int32_t instance_idx, int32_t surface, int32_t allocator) {
-    VkInstance instance = (VkInstance)index_to_ptr(instance_idx);
-    VkSurfaceKHR surf = (VkSurfaceKHR)(uintptr_t)surface;
+void vulkan_vkDestroySurfaceKHR(int32_t instance_idx, int32_t surface_idx, int32_t allocator) {
+    void* instance_buffer = index_to_ptr(instance_idx);
+    VkInstance instance = instance_buffer ? *(VkInstance*)instance_buffer : NULL;
+
+    void* surface_buffer = index_to_ptr(surface_idx);
+    VkSurfaceKHR surf = surface_buffer ? *(VkSurfaceKHR*)surface_buffer : (VkSurfaceKHR)(uintptr_t)surface_idx;
+
     vkDestroySurfaceKHR(instance, surf, NULL);
 }
 
@@ -195,4 +271,136 @@ int32_t vulkan_vkCreateSurfaceKHR(int32_t instance_idx, int32_t create_info, int
     // Note: This function should be called with actual surface creation logic
     // For now, we'll assume the surface is created elsewhere
     return (int32_t)VK_SUCCESS;
+}
+
+// vkCreateDevice wrapper - accepts array index and device index
+int32_t vulkan_vkCreateDeviceArray(int32_t devices_idx, int32_t device_index, int32_t create_info_idx, int32_t allocator, int32_t device_idx) {
+    printf("DEBUG: vkCreateDeviceArray called\n");
+    printf("  devices_idx: %d, device_index: %d, create_info_idx: %d, device_idx: %d\n",
+           devices_idx, device_index, create_info_idx, device_idx);
+
+    void* devices_buffer = index_to_ptr(devices_idx);
+    VkPhysicalDevice physical_device = NULL;
+    if (devices_buffer) {
+        VkPhysicalDevice* devices = (VkPhysicalDevice*)devices_buffer;
+        physical_device = devices[device_index];
+    }
+
+    void* create_info = index_to_ptr(create_info_idx);
+    void* device_buffer = index_to_ptr(device_idx);
+
+    printf("  physical_device: %p, create_info: %p, device_buffer: %p\n",
+           (void*)physical_device, create_info, device_buffer);
+
+    // Hack: Use a static queue priority value
+    static float queue_priority = 1.0f;
+
+    // Create a queue create info structure
+    static VkDeviceQueueCreateInfo queue_ci;
+    queue_ci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_ci.pNext = NULL;
+    queue_ci.flags = 0;
+    queue_ci.queueFamilyIndex = 0;  // Will be set below
+    queue_ci.queueCount = 1;
+    queue_ci.pQueuePriorities = &queue_priority;
+
+    VkDeviceCreateInfo* device_ci = (VkDeviceCreateInfo*)create_info;
+
+    printf("  queueCreateInfoCount: %u\n", device_ci->queueCreateInfoCount);
+
+    // Set the queue family index from the original structure
+    if (device_ci->queueCreateInfoCount > 0) {
+        // Get the queue create info index stored at offset 32
+        int32_t queue_info_idx = *(int32_t*)((uint8_t*)create_info + 32);
+        printf("  queue_info_idx: %d\n", queue_info_idx);
+
+        void* queue_info_ptr = index_to_ptr(queue_info_idx);
+        if (queue_info_ptr) {
+            int32_t queue_family = *(int32_t*)((uint8_t*)queue_info_ptr + 24);
+            printf("  queue_family from info: %d\n", queue_family);
+            queue_ci.queueFamilyIndex = (uint32_t)queue_family;
+        }
+
+        // Point to our static queue info
+        device_ci->pQueueCreateInfos = &queue_ci;
+        printf("  set pQueueCreateInfos to %p\n", (void*)&queue_ci);
+    }
+
+    // Clear extension count for now (swapchain will be added later)
+    device_ci->enabledExtensionCount = 0;
+
+    fflush(stdout);
+
+    VkResult result = vkCreateDevice(physical_device, (const VkDeviceCreateInfo*)create_info, NULL, (VkDevice*)device_buffer);
+
+    printf("  Result: %d\n", result);
+    fflush(stdout);
+
+    return (int32_t)result;
+}
+
+// Simplified version that takes queue family index directly
+int32_t vulkan_vkCreateDeviceArraySimple(int32_t devices_idx, int32_t device_index, int32_t queue_family, int32_t create_info_idx, int32_t allocator, int32_t device_idx) {
+    printf("DEBUG: vkCreateDeviceArraySimple called - queue_family: %d\n", queue_family);
+
+    void* devices_buffer = index_to_ptr(devices_idx);
+    VkPhysicalDevice physical_device = NULL;
+    if (devices_buffer) {
+        VkPhysicalDevice* devices = (VkPhysicalDevice*)devices_buffer;
+        physical_device = devices[device_index];
+    }
+
+    void* create_info = index_to_ptr(create_info_idx);
+    void* device_buffer = index_to_ptr(device_idx);
+
+    // Create queue create info
+    static float queue_priority = 1.0f;
+    static VkDeviceQueueCreateInfo queue_ci;
+    queue_ci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_ci.pNext = NULL;
+    queue_ci.flags = 0;
+    queue_ci.queueFamilyIndex = (uint32_t)queue_family;
+    queue_ci.queueCount = 1;
+    queue_ci.pQueuePriorities = &queue_priority;
+
+    VkDeviceCreateInfo* device_ci = (VkDeviceCreateInfo*)create_info;
+
+    // Ensure all fields are properly set
+    device_ci->sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_ci->pNext = NULL;
+    device_ci->flags = 0;
+    device_ci->queueCreateInfoCount = 1;
+    device_ci->pQueueCreateInfos = &queue_ci;
+    device_ci->enabledLayerCount = 0;
+    device_ci->ppEnabledLayerNames = NULL;
+    device_ci->enabledExtensionCount = 0;
+    device_ci->ppEnabledExtensionNames = NULL;
+    device_ci->pEnabledFeatures = NULL;
+
+    printf("  Calling vkCreateDevice with physical_device: %p\n", (void*)physical_device);
+    fflush(stdout);
+
+    VkResult result = vkCreateDevice(physical_device, (const VkDeviceCreateInfo*)create_info, NULL, (VkDevice*)device_buffer);
+
+    printf("  vkCreateDevice result: %d\n", result);
+    fflush(stdout);
+
+    return (int32_t)result;
+}
+
+// vkGetDeviceQueue wrapper - accepts device buffer index
+void vulkan_vkGetDeviceQueueArray(int32_t device_idx, int32_t queue_family, int32_t queue_index, int32_t queue_out_idx) {
+    void* device_buffer = index_to_ptr(device_idx);
+    VkDevice device = device_buffer ? *(VkDevice*)device_buffer : NULL;
+
+    void* queue_buffer = index_to_ptr(queue_out_idx);
+
+    vkGetDeviceQueue(device, queue_family, queue_index, (VkQueue*)queue_buffer);
+}
+
+// vkDestroyDevice wrapper - accepts device buffer index
+void vulkan_vkDestroyDevice(int32_t device_idx, int32_t allocator) {
+    void* device_buffer = index_to_ptr(device_idx);
+    VkDevice device = device_buffer ? *(VkDevice*)device_buffer : NULL;
+    vkDestroyDevice(device, NULL);
 }
