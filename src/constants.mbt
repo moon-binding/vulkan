@@ -1,0 +1,53 @@
+///|
+/// MoonBit Vulkan SDK Bindings - Constants
+/// Vulkan constant definitions
+
+// Maximum constants
+pub const VK_MAX_PHYSICAL_DEVICE_NAME_SIZE : Int = 256
+pub const VK_MAX_EXTENSION_NAME_SIZE : Int = 256
+pub const VK_MAX_DESCRIPTION_SIZE : Int = 256
+pub const VK_MAX_MEMORY_TYPES : Int = 32
+pub const VK_MAX_MEMORY_HEAPS : Int = 16
+pub const VK_MAX_QUEUE_FAMILY_PROPERTIES : Int = 32
+pub const VK_MAX_IMAGE_MIP_LEVELS : Int = 16
+pub const VK_MAX_IMAGE_ARRAY_LAYERS : Int = 2048
+pub const VK_MAX_VIEWPORTS : Int = 16
+pub const VK_MAX_VIEWPORT_DIMENSIONS : Int = 4096
+pub const VK_MAX_FRAMEBUFFER_WIDTH : Int = 4096
+pub const VK_MAX_FRAMEBUFFER_HEIGHT : Int = 4096
+pub const VK_MAX_FRAMEBUFFER_LAYERS : Int = 2048
+pub const VK_MAX_COLOR_ATTACHMENTS : Int = 8
+pub const VK_MAX_COMPUTE_SHARED_MEMORY_SIZE : Int = 32768
+pub const VK_MAX_UNIFORM_BUFFER_RANGE : Int = 65536
+pub const VK_MAX_STORAGE_BUFFER_RANGE : Int = -1
+pub const VK_WHOLE_SIZE : Int = -1
+
+// Special constants (use Int for compatibility)
+pub const VK_ATTACHMENT_UNUSED : Int = -1
+pub const VK_TRUE : Int = 1
+pub const VK_FALSE : Int = 0
+pub const VK_QUEUE_FAMILY_IGNORED : Int = -1
+pub const VK_REMAINING_MIP_LEVELS : Int = -1
+pub const VK_REMAINING_ARRAY_LAYERS : Int = -1
+pub const VK_SUBPASS_EXTERNAL : Int = -1
+pub const VK_MAX_DEVICE_GROUP_SIZE : Int = 32
+pub const VK_LUID_SIZE : Int = 8
+
+// Shader stage flags
+pub const VK_SHADER_STAGE_VERTEX_BIT : Int = 0x00000001
+pub const VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT : Int = 0x00000002
+pub const VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT : Int = 0x00000004
+pub const VK_SHADER_STAGE_GEOMETRY_BIT : Int = 0x00000008
+pub const VK_SHADER_STAGE_FRAGMENT_BIT : Int = 0x00000010
+pub const VK_SHADER_STAGE_COMPUTE_BIT : Int = 0x00000020
+pub const VK_SHADER_STAGE_ALL_GRAPHICS : Int = 0x0000001F
+pub const VK_SHADER_STAGE_ALL : Int = 0x7FFFFFFF
+pub const VK_SHADER_STAGE_RAYGEN_BIT_KHR : Int = 0x00000100
+pub const VK_SHADER_STAGE_ANY_HIT_BIT_KHR : Int = 0x00000200
+pub const VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR : Int = 0x00000400
+pub const VK_SHADER_STAGE_MISS_BIT_KHR : Int = 0x00000800
+pub const VK_SHADER_STAGE_INTERSECTION_BIT_KHR : Int = 0x00001000
+pub const VK_SHADER_STAGE_CALLABLE_BIT_KHR : Int = 0x00002000
+pub const VK_SHADER_STAGE_TASK_BIT_NV : Int = 0x00000040
+pub const VK_SHADER_STAGE_MESH_BIT_NV : Int = 0x00000080
+pub const VK_SHADER_STAGE_SUBPASS_SHADING_BIT_HUAWEI : Int = 0x00004000

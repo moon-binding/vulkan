@@ -1,0 +1,15 @@
+{
+  "name": "moonbit/vulkan",
+  "version": "0.1.0",
+  "readme": "README.md",
+  "repository": "https://github.com/moon-binding/vulkan",
+  "license": "MIT",
+  "keywords": [
+    "vulkan",
+    "graphics",
+    "gpu",
+    "3d",
+    "rendering"
+  ],
+  "description": "Complete Vulkan SDK bindings for MoonBit"
+}
