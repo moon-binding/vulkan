@@ -10,6 +10,18 @@
 // All Vulkan structures are passed as void* pointers
 // VkResult is returned as int32_t
 
+// Allocate memory for structures
+int32_t vulkan_alloc_struct(int32_t size) {
+    return (int32_t)(intptr_t)malloc(size);
+}
+
+// Free structure memory
+void vulkan_free_struct(int32_t ptr) {
+    if (ptr) {
+        free((void*)(intptr_t)ptr);
+    }
+}
+
 // Memory access helpers for structure fields
 void vulkan_put_int32(int32_t ptr, int32_t offset, int32_t value) {
     if (ptr) {
@@ -73,5 +85,13 @@ void vulkan_set_float_array_value(int32_t array, int32_t index, float value) {
     if (array) {
         float* ptr = (float*)((uint8_t*)array + (index * 4));
         *ptr = value;
+    }
+}
+
+// Set float value in struct
+void vulkan_set_float(int32_t ptr, int32_t offset, float value) {
+    if (ptr) {
+        float* fptr = (float*)((uint8_t*)ptr + offset);
+        *fptr = value;
     }
 }

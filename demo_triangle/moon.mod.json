@@ -1,0 +1,10 @@
+{
+  "name": "moonbit/vulkan/demo_triangle",
+  "version": "0.1.0",
+  "readme": "README.md",
+  "deps": {
+    "moonbit/vulkan": {
+      "path": "../vulkan"
+    }
+  }
+}

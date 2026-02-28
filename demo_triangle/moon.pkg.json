@@ -1,0 +1,12 @@
+{
+  "is_main": true,
+  "link": {
+    "native": {
+      "cc-link-flags": "-lvulkan -ldl -lpthread -lglfw"
+    }
+  },
+  "native-stub": ["window.c"],
+  "import": [
+    "moonbit/vulkan"
+  ]
+}

@@ -10,10 +10,10 @@
 // and are accessible in the same package
 
 // Allocate memory for a structure
-extern "C" fn vulkan_alloc_struct(size : Int) -> Int = "malloc"
+pub extern "C" fn vulkan_alloc_struct(size : Int) -> Int = "vulkan_alloc_struct"
 
 // Free structure memory
-extern "C" fn vulkan_free_struct(ptr : Int) -> Unit = "free"
+pub extern "C" fn vulkan_free_struct(ptr : Int) -> Unit = "vulkan_free_struct"
 
 // Allocate and initialize VkApplicationInfo
 pub fn alloc_application_info() -> Int {
@@ -190,11 +190,11 @@ pub fn set_swapchain_min_image_count(create_info : Int, count : Int) -> Unit {
 }
 
 // Memory access helpers (using C functions)
-extern "C" fn put_int32(ptr : Int, offset : Int, value : Int) -> Unit = "vulkan_put_int32"
-extern "C" fn put_int64(ptr : Int, offset : Int, value : Int) -> Unit = "vulkan_put_int64"
-extern "C" fn get_int32(ptr : Int, offset : Int) -> Int = "vulkan_get_int32"
-extern "C" fn get_int64(ptr : Int, offset : Int) -> Int = "vulkan_get_int64"
+pub extern "C" fn put_int32(ptr : Int, offset : Int, value : Int) -> Unit = "vulkan_put_int32"
+pub extern "C" fn put_int64(ptr : Int, offset : Int, value : Int) -> Unit = "vulkan_put_int64"
+pub extern "C" fn get_int32(ptr : Int, offset : Int) -> Int = "vulkan_get_int32"
+pub extern "C" fn get_int64(ptr : Int, offset : Int) -> Int = "vulkan_get_int64"
 
 // Utility function to create string for Vulkan
-extern "C" fn vulkan_create_string(s : String) -> Int = "vulkan_create_string"
-extern "C" fn vulkan_free_string(ptr : Int) -> Unit = "vulkan_free_string"
+pub extern "C" fn vulkan_create_string(s : String) -> Int = "vulkan_create_string"
+pub extern "C" fn vulkan_free_string(ptr : Int) -> Unit = "vulkan_free_string"

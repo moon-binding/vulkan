@@ -1,9 +1,0 @@
-{
-  "is_main": true,
-  "link": {
-    "native": {
-      "cc-link-flags": "-lvulkan -lX11 -lpthread -ldl"
-    }
-  },
-  "native-stub": ["window.c"]
-}
