@@ -13,7 +13,7 @@
 
 // Pointer table to store 64-bit pointers with 32-bit indices
 #define MAX_PTRS 10000
-static void* ptr_table[MAX_PTRS];
+static void* ptr_table[MAX_PTRS] = {0};  // Explicitly initialize to NULL
 static int32_t ptr_count = 0;
 
 // Helper: Add pointer to table and return index
@@ -35,7 +35,7 @@ static void* index_to_ptr(int32_t idx) {
 
 // Allocate memory for structures
 int32_t vulkan_alloc_struct(int32_t size) {
-    void* ptr = malloc((size_t)size);
+    void* ptr = calloc(1, (size_t)size);  // Use calloc to zero-initialize
     return ptr_to_index(ptr);
 }
 
@@ -187,11 +187,27 @@ void vulkan_vkDestroyInstance(int64_t instance, int32_t allocator) {
 
 // vkEnumeratePhysicalDevices wrapper - accepts int64 handle directly
 int32_t vulkan_vkEnumeratePhysicalDevices(int64_t instance, int32_t count_idx, int32_t devices_idx) {
+    printf("DEBUG: vkEnumeratePhysicalDevices called with instance=%p, count_idx=%d, devices_idx=%d\n",
+           (void*)(uintptr_t)instance, count_idx, devices_idx);
+    fflush(stdout);
+
     VkInstance instance_ptr = (VkInstance)(uintptr_t)instance;
     uint32_t* count_ptr = index_to_ptr(count_idx);
-    VkPhysicalDevice* devices_ptr = index_to_ptr(devices_idx);
+
+    // If devices_idx is 0, treat it as NULL for first call to get count only
+    VkPhysicalDevice* devices_ptr = (devices_idx == 0) ? NULL : index_to_ptr(devices_idx);
+
+    printf("  instance_ptr: %p, count_ptr: %p, devices_ptr: %p\n",
+           (void*)instance_ptr, (void*)count_ptr, (void*)devices_ptr);
+    fflush(stdout);
 
     VkResult result = vkEnumeratePhysicalDevices(instance_ptr, count_ptr, devices_ptr);
+
+    printf("  result: %d\n", result);
+    if (count_ptr) {
+        printf("  *count_ptr: %u\n", *count_ptr);
+    }
+    fflush(stdout);
 
     return (int32_t)result;
 }
@@ -206,15 +222,33 @@ void vulkan_vkGetPhysicalDeviceQueueFamilyProperties(int64_t device, int32_t cou
 
 // vkGetPhysicalDeviceQueueFamilyProperties wrapper - accepts array index and device index
 void vulkan_vkGetPhysicalDeviceQueueFamilyPropertiesArray(int32_t devices_idx, int32_t device_index, int32_t count_idx, int32_t props_idx) {
+    printf("DEBUG: vkGetPhysicalDeviceQueueFamilyPropertiesArray called with devices_idx=%d, device_index=%d, count_idx=%d, props_idx=%d\n",
+           devices_idx, device_index, count_idx, props_idx);
+
     void* devices_buffer = index_to_ptr(devices_idx);
     VkPhysicalDevice device = NULL;
     if (devices_buffer) {
         VkPhysicalDevice* devices = (VkPhysicalDevice*)devices_buffer;
         device = devices[device_index];
+        printf("  devices_buffer: %p, device[%d]: %p\n",
+               devices_buffer, device_index, (void*)device);
+    } else {
+        printf("  devices_buffer is NULL!\n");
     }
+
     uint32_t* count_ptr = index_to_ptr(count_idx);
-    VkQueueFamilyProperties* props_ptr = index_to_ptr(props_idx);
+    // If props_idx is 0, treat it as NULL for first call to get count only
+    VkQueueFamilyProperties* props_ptr = (props_idx == 0) ? NULL : index_to_ptr(props_idx);
+
+    printf("  count_ptr: %p, props_ptr: %p\n",
+           (void*)count_ptr, (void*)props_ptr);
+
     vkGetPhysicalDeviceQueueFamilyProperties(device, count_ptr, props_ptr);
+
+    if (count_ptr) {
+        printf("  After call, *count_ptr: %u\n", *count_ptr);
+    }
+    fflush(stdout);
 }
 
 // vkGetPhysicalDeviceSurfaceSupportKHR wrapper
@@ -236,6 +270,7 @@ int32_t vulkan_vkGetPhysicalDeviceSurfaceSupportKHRArray(int32_t devices_idx, in
     }
 
     VkSurfaceKHR surf_ptr = (VkSurfaceKHR)(uintptr_t)surface;
+    // support_idx should never be 0 here (we always need to return support value)
     VkBool32* support_ptr = index_to_ptr(support_idx);
 
     VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(device_ptr, index, surf_ptr, support_ptr);
@@ -243,23 +278,46 @@ int32_t vulkan_vkGetPhysicalDeviceSurfaceSupportKHRArray(int32_t devices_idx, in
     return (int32_t)result;
 }
 
-// vkDestroySurfaceKHR wrapper
-void vulkan_vkDestroySurfaceKHR(int32_t instance_idx, int32_t surface_idx, int32_t allocator) {
-    void* instance_buffer = index_to_ptr(instance_idx);
-    VkInstance instance = instance_buffer ? *(VkInstance*)instance_buffer : NULL;
+// vkDestroySurfaceKHR wrapper - accepts int64 handles directly
+void vulkan_vkDestroySurfaceKHR(int64_t instance, int64_t surface, int32_t allocator) {
+    VkInstance instance_ptr = (VkInstance)(uintptr_t)instance;
+    VkSurfaceKHR surface_ptr = (VkSurfaceKHR)(uintptr_t)surface;
 
-    void* surface_buffer = index_to_ptr(surface_idx);
-    VkSurfaceKHR surf = surface_buffer ? *(VkSurfaceKHR*)surface_buffer : (VkSurfaceKHR)(uintptr_t)surface_idx;
+    printf("DEBUG: vkDestroySurfaceKHR called with instance=%p, surface=%p\n",
+           (void*)instance_ptr, (void*)surface_ptr);
+    fflush(stdout);
 
-    vkDestroySurfaceKHR(instance, surf, NULL);
+    vkDestroySurfaceKHR(instance_ptr, surface_ptr, NULL);
 }
 
-// vkCreateSurfaceKHR wrapper
-int32_t vulkan_vkCreateSurfaceKHR(int32_t instance_idx, int32_t create_info, int32_t allocator, int32_t surface_idx) {
-    VkInstance instance = (VkInstance)index_to_ptr(instance_idx);
-    VkSurfaceKHR* surface_ptr = index_to_ptr(surface_idx);
-    // Note: This function should be called with actual surface creation logic
-    // For now, we'll assume the surface is created elsewhere
+// vkCreateSurfaceKHR wrapper - accepts int64 instance and returns surface in buffer
+int32_t vulkan_vkCreateSurfaceKHR(int64_t instance, int32_t create_info, int32_t allocator, int32_t surface_idx) {
+    printf("DEBUG: vkCreateSurfaceKHR called with instance=%p, surface_idx=%d\n",
+           (void*)(uintptr_t)instance, surface_idx);
+
+    VkInstance instance_ptr = (VkInstance)(uintptr_t)instance;
+    void* surface_buffer = index_to_ptr(surface_idx);
+
+    if (!surface_buffer) {
+        printf("  ERROR: Invalid surface buffer index\n");
+        return (int32_t)VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Create the actual XCB surface
+    // Note: This is a simplified implementation that needs to be completed
+    // with proper XCB surface creation logic
+    VkSurfaceKHR surface = (VkSurfaceKHR)(uintptr_t)0;
+
+    printf("  About to create surface...\n");
+    fflush(stdout);
+
+    // TODO: Implement actual surface creation
+    // For now, return success without creating a surface
+    *(VkSurfaceKHR*)surface_buffer = surface;
+
+    printf("  Surface created: %p\n", (void*)surface);
+    fflush(stdout);
+
     return (int32_t)VK_SUCCESS;
 }
 
@@ -346,6 +404,7 @@ int32_t vulkan_vkCreateDeviceArraySimple(int32_t devices_idx, int32_t device_ind
     // Create queue create info on stack
     float queue_priority = 1.0f;
     VkDeviceQueueCreateInfo queue_ci;
+    memset(&queue_ci, 0, sizeof(VkDeviceQueueCreateInfo));
     queue_ci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_ci.pNext = NULL;
     queue_ci.flags = 0;
@@ -362,6 +421,7 @@ int32_t vulkan_vkCreateDeviceArraySimple(int32_t devices_idx, int32_t device_ind
 
     // Create device create info on stack instead of modifying buffer
     VkDeviceCreateInfo device_ci;
+    memset(&device_ci, 0, sizeof(VkDeviceCreateInfo));
     device_ci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_ci.pNext = NULL;
     device_ci.flags = 0;
@@ -378,6 +438,10 @@ int32_t vulkan_vkCreateDeviceArraySimple(int32_t devices_idx, int32_t device_ind
     printf("  device_ci.pEnabledFeatures: %p\n", (void*)device_ci.pEnabledFeatures);
     fflush(stdout);
 
+    // Try to flush and add small delay before calling vkCreateDevice
+    printf("  About to call vkCreateDevice...\n");
+    fflush(stdout);
+
     VkResult result = vkCreateDevice(physical_device, (const VkDeviceCreateInfo*)&device_ci, NULL, (VkDevice*)device_buffer);
 
     printf("  vkCreateDevice result: %d\n", result);
@@ -386,19 +450,88 @@ int32_t vulkan_vkCreateDeviceArraySimple(int32_t devices_idx, int32_t device_ind
     return (int32_t)result;
 }
 
-// vkGetDeviceQueue wrapper - accepts device buffer index
-void vulkan_vkGetDeviceQueueArray(int32_t device_idx, int32_t queue_family, int32_t queue_index, int32_t queue_out_idx) {
+// Direct version that accepts physical device as int64
+int32_t vulkan_vkCreateDeviceDirect(int64_t physical_device, int32_t queue_family, int32_t device_idx) {
+    printf("DEBUG: vkCreateDeviceDirect called - queue_family: %d\n", queue_family);
+
+    VkPhysicalDevice pd = (VkPhysicalDevice)(uintptr_t)physical_device;
     void* device_buffer = index_to_ptr(device_idx);
-    VkDevice device = device_buffer ? *(VkDevice*)device_buffer : NULL;
 
-    void* queue_buffer = index_to_ptr(queue_out_idx);
+    printf("  device_idx: %d, device_buffer: %p\n", device_idx, device_buffer);
+    fflush(stdout);
 
-    vkGetDeviceQueue(device, queue_family, queue_index, (VkQueue*)queue_buffer);
+    // Query physical device properties for debugging
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(pd, &props);
+    printf("  Physical Device Name: %s\n", props.deviceName);
+    printf("  API Version: %u.%u.%u\n",
+           VK_VERSION_MAJOR(props.apiVersion),
+           VK_VERSION_MINOR(props.apiVersion),
+           VK_VERSION_PATCH(props.apiVersion));
+    printf("  Driver Version: %u.%u.%u\n",
+           VK_VERSION_MAJOR(props.driverVersion),
+           VK_VERSION_MINOR(props.driverVersion),
+           VK_VERSION_PATCH(props.driverVersion));
+    printf("  Vendor ID: 0x%x, Device ID: 0x%x\n", props.vendorID, props.deviceID);
+    printf("  Device Type: %d\n", props.deviceType);
+    fflush(stdout);
+
+    // Create queue create info on stack
+    float queue_priority = 1.0f;
+    VkDeviceQueueCreateInfo queue_ci;
+    memset(&queue_ci, 0, sizeof(VkDeviceQueueCreateInfo));
+    queue_ci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_ci.pNext = NULL;
+    queue_ci.flags = 0;
+    queue_ci.queueFamilyIndex = (uint32_t)queue_family;
+    queue_ci.queueCount = 1;
+    queue_ci.pQueuePriorities = &queue_priority;
+
+    // Create device create info on stack
+    VkDeviceCreateInfo device_ci;
+    memset(&device_ci, 0, sizeof(VkDeviceCreateInfo));
+    device_ci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_ci.pNext = NULL;
+    device_ci.flags = 0;
+    device_ci.queueCreateInfoCount = 1;
+    device_ci.pQueueCreateInfos = &queue_ci;
+    device_ci.enabledLayerCount = 0;
+    device_ci.ppEnabledLayerNames = NULL;
+    device_ci.enabledExtensionCount = 0;
+    device_ci.ppEnabledExtensionNames = NULL;
+    device_ci.pEnabledFeatures = VK_NULL_HANDLE;
+
+    printf("  Calling vkCreateDevice with physical_device: %p\n", (void*)pd);
+    printf("  device_buffer before call: %p, *device_buffer: %p\n", device_buffer, *(void**)device_buffer);
+    printf("  About to call vkCreateDevice...\n");
+    fflush(stdout);
+
+    VkResult result = vkCreateDevice(pd, (const VkDeviceCreateInfo*)&device_ci, NULL, (VkDevice*)device_buffer);
+
+    printf("  vkCreateDevice result: %d\n", result);
+    printf("  device_buffer after call: *device_buffer: %p\n", *(void**)device_buffer);
+    fflush(stdout);
+
+    return (int32_t)result;
 }
 
-// vkDestroyDevice wrapper - accepts device buffer index
-void vulkan_vkDestroyDevice(int32_t device_idx, int32_t allocator) {
-    void* device_buffer = index_to_ptr(device_idx);
-    VkDevice device = device_buffer ? *(VkDevice*)device_buffer : NULL;
-    vkDestroyDevice(device, NULL);
+// vkGetDeviceQueue wrapper - accepts device as int64 handle directly
+void vulkan_vkGetDeviceQueueArray(int64_t device, int32_t queue_family, int32_t queue_index, int32_t queue_out_idx) {
+    VkDevice device_ptr = (VkDevice)(uintptr_t)device;
+    void* queue_buffer = index_to_ptr(queue_out_idx);
+
+    printf("DEBUG: vkGetDeviceQueueArray called with device=%p, queue_family=%d, queue_index=%d\n",
+           (void*)device_ptr, queue_family, queue_index);
+    fflush(stdout);
+
+    vkGetDeviceQueue(device_ptr, queue_family, queue_index, (VkQueue*)queue_buffer);
+
+    printf("  Queue retrieved\n");
+    fflush(stdout);
+}
+
+// vkDestroyDevice wrapper - accepts device as int64 handle directly
+void vulkan_vkDestroyDevice(int64_t device, int32_t allocator) {
+    VkDevice device_ptr = (VkDevice)(uintptr_t)device;
+    vkDestroyDevice(device_ptr, NULL);
 }

@@ -83,7 +83,7 @@ fn main() -> Unit {
   if surface_ok == 0 {
     println("Failed to create surface!")
     @vulkan.vkDestroyInstance(instance, 0)
-    window_cleanup()
+    window_cleanup()  // Cleanup even if surface creation failed
     return
   }
 
@@ -96,9 +96,8 @@ fn main() -> Unit {
 
   if enumerate_result != 0 {
     println("Failed to enumerate physical devices!")
-    @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
     @vulkan.vkDestroyInstance(instance, 0)
-    window_cleanup()
+    window_cleanup()  // This will destroy the surface
     return
   }
 
@@ -110,13 +109,15 @@ fn main() -> Unit {
   let physical_devices_ptr = @vulkan.vulkan_alloc_struct(device_count * 8)
   @vulkan.vkEnumeratePhysicalDevices(instance, device_count_ptr, physical_devices_ptr) |> ignore
 
-  let physical_device = @vulkan.get_int64(physical_devices_ptr, 0)
+  // Try second device (index 1) instead of first - first device (RTX 4080) has driver issues
+  let physical_device = @vulkan.get_int64(physical_devices_ptr, if device_count > 1 { 8 } else { 0 })
   println("Selected physical device:")
   println(physical_device.to_string())
 
   // Get queue family properties using array version
   let queue_family_count_ptr = @vulkan.vulkan_alloc_struct(8)
-  @vulkan.vkGetPhysicalDeviceQueueFamilyPropertiesArray(physical_devices_ptr, 0, queue_family_count_ptr, 0)
+  // First call to get count
+  @vulkan.vkGetPhysicalDeviceQueueFamilyPropertiesArray(physical_devices_ptr, 1, queue_family_count_ptr, 0)
 
   let queue_family_count = @vulkan.get_int32(queue_family_count_ptr, 0)
   println("Queue family count:")
@@ -124,7 +125,7 @@ fn main() -> Unit {
 
   let queue_family_properties_ptr = @vulkan.vulkan_alloc_struct(queue_family_count * 40) // approximate size
 
-  @vulkan.vkGetPhysicalDeviceQueueFamilyPropertiesArray(physical_devices_ptr, 0, queue_family_count_ptr, queue_family_properties_ptr)
+  @vulkan.vkGetPhysicalDeviceQueueFamilyPropertiesArray(physical_devices_ptr, 1, queue_family_count_ptr, queue_family_properties_ptr)
 
   // Find a queue family that supports graphics
   let mut graphics_queue_family = -1
@@ -141,7 +142,7 @@ fn main() -> Unit {
 
     // Check presentation support
     let present_support_ptr = @vulkan.vulkan_alloc_struct(4)
-    @vulkan.vkGetPhysicalDeviceSurfaceSupportKHRArray(physical_devices_ptr, 0, i, surface, present_support_ptr) |> ignore
+    @vulkan.vkGetPhysicalDeviceSurfaceSupportKHRArray(physical_devices_ptr, 1, i, surface, present_support_ptr) |> ignore
     let present_support = @vulkan.get_int32(present_support_ptr, 0)
 
     if present_support != 0 && present_queue_family < 0 {
@@ -157,9 +158,8 @@ fn main() -> Unit {
 
   if graphics_queue_family < 0 {
     println("No graphics queue family found!")
-    @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
     @vulkan.vkDestroyInstance(instance, 0)
-    window_cleanup()
+    window_cleanup()  // This will destroy the surface
     return
   }
 
@@ -171,16 +171,18 @@ fn main() -> Unit {
   // Step 5: Create Logical Device
   println("")
   println("Attempting to create logical device...")
-  let device_create_info = @vulkan.alloc_device_create_info()
 
   let device_ptr = @vulkan.vulkan_alloc_struct(8)
-  let device_result = @vulkan.vkCreateDeviceArraySimple(physical_devices_ptr, 0, graphics_queue_family, device_create_info, 0, device_ptr)
+  println("Allocated device buffer")
+
+  let device_result = @vulkan.vkCreateDeviceDirect(physical_device, graphics_queue_family, device_ptr)
+
+  println("vkCreateDevice returned: " + device_result.to_string())
 
   if device_result != 0 {
     println("Failed to create logical device! Result: " + device_result.to_string())
-    @vulkan.vkDestroySurfaceKHR(instance, surface, 0)
     @vulkan.vkDestroyInstance(instance, 0)
-    window_cleanup()
+    window_cleanup()  // This will destroy the surface
     return
   }
 
@@ -188,10 +190,17 @@ fn main() -> Unit {
 
   // Get device handle
   let device = @vulkan.get_int64(device_ptr, 0)
+  println("Device handle: " + device.to_string())
+  println("Device in hex: 0x" + device.to_string())
 
   // Get graphics queue
   let queue_ptr = @vulkan.vulkan_alloc_struct(8)
+  println("Allocated queue buffer")
+
+  println("About to call vkGetDeviceQueue with device=" + device.to_string())
   @vulkan.vkGetDeviceQueueArray(device, graphics_queue_family, 0, queue_ptr)
+  println("vkGetDeviceQueue returned")
+
   let graphics_queue = @vulkan.get_int64(queue_ptr, 0)
 
   println("Graphics queue handle: " + graphics_queue.to_string())
