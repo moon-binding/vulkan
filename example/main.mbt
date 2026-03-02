@@ -23,11 +23,37 @@ fn print_banner() -> Unit {
 fn main() -> Unit {
   print_banner()
 
-  // Skip MoonBit test for now (vkCreateDevice issue)
-  // The device creation needs further investigation
+  // Test MoonBit Vulkan instance creation
+  println("=== Test 1: Creating Vulkan instance with MoonBit ===")
+  let instance_result = create_vulkan_instance()
+
+  match instance_result {
+    InstanceCreated(instance) => {
+      println("Success! Instance handle: " + instance.to_string())
+      println("")
+
+      // Test physical device selection (skipping logical device creation due to vkCreateDevice issue)
+      println("=== Test 2: Enumerating physical devices ===")
+      let physical_device = select_physical_device(instance)
+
+      if physical_device > 0 {
+        println("Physical device enumerated successfully!")
+        println("Skipping logical device creation (known vkCreateDevice issue)")
+      }
+
+      // Clean up
+      destroy_vulkan_instance(instance)
+    }
+    InstanceError(msg) => {
+      println("Error: " + msg)
+    }
+  }
 
   println("")
-  println("=== Running original Vulkan demo with C FFI ===")
+  println("=== MoonBit Vulkan instance test completed ===")
+  println("")
+
+  println("Now running original demo with C FFI...")
   println("")
 
   // Initialize Vulkan with 800x600 window

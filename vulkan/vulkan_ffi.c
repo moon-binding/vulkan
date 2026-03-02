@@ -633,6 +633,21 @@ int32_t vulkan_vkCreateDeviceDirectSimple(int64_t physical_device, int32_t queue
         return (int32_t)VK_ERROR_INITIALIZATION_FAILED;
     }
 
+    // Double-check queue_ci is properly set up
+    printf("  Final check before vkCreateDevice:\n");
+    printf("    queue_ci.sType = %u (expected %u)\n", queue_ci.sType, VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO);
+    printf("    queue_ci.queueFamilyIndex = %u\n", queue_ci.queueFamilyIndex);
+    printf("    queue_ci.queueCount = %u\n", queue_ci.queueCount);
+    printf("    queue_ci.pQueuePriorities = %p\n", (void*)queue_ci.pQueuePriorities);
+    if (queue_ci.pQueuePriorities) {
+        printf("    *queue_ci.pQueuePriorities = %f\n", *queue_ci.pQueuePriorities);
+    }
+    printf("    device_ci.queueCreateInfoCount = %u\n", device_ci.queueCreateInfoCount);
+    printf("    device_ci.pQueueCreateInfos = %p\n", (void*)device_ci.pQueueCreateInfos);
+    printf("    device_ci.enabledExtensionCount = %u\n", device_ci.enabledExtensionCount);
+    printf("    device_ci.pEnabledFeatures = %p\n", (void*)device_ci.pEnabledFeatures);
+    fflush(stdout);
+
     VkResult result = vkCreateDevice(pd, &device_ci, NULL, (VkDevice*)device_buffer);
 
     printf("  vkCreateDevice returned with result: %d\n", result);
