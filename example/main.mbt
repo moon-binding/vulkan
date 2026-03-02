@@ -53,28 +53,47 @@ fn main() -> Unit {
   println("=== MoonBit Vulkan instance test completed ===")
   println("")
 
-  println("Now running original demo with C FFI...")
+  println("Now running full demo with progressive MoonBit implementation...")
   println("")
 
-  // Initialize Vulkan with 800x600 window
-  let initialized = vk_init("MoonBit Vulkan Triangle", 800, 600)
+  // Step 1: Test MoonBit window creation
+  println("=== Step 1: Creating window with MoonBit ===")
+  match init_window("MoonBit Vulkan Triangle", 800, 600) {
+    WindowCreated(window) => {
+      println("Window created successfully with MoonBit! Handle: " + window.to_string())
 
-  if initialized {
-    println("Vulkan initialized successfully!")
-    println("Starting render loop...")
-    println("")
+      // For now, continue with C bridge for Vulkan rendering
+      // We'll progressively replace more components
 
-    // Enter main rendering loop
-    vk_main_loop()
+      // Enter main rendering loop using C bridge
+      // vk_main_loop()
 
-    // Cleanup
-    vk_cleanup()
-    println("Application terminated normally.")
-  } else {
-    println("Failed to initialize Vulkan!")
-    println("Make sure you have:")
-    println("  - A Vulkan-compatible GPU")
-    println("  - Vulkan drivers installed")
-    println("  - GLFW library available")
+      // Cleanup
+      cleanup_window(window)
+    }
+    WindowError(msg) => {
+      println("Window creation failed: " + msg)
+      println("Falling back to C bridge...")
+      let initialized = vk_init("MoonBit Vulkan Triangle", 800, 600)
+
+      if initialized {
+        println("Vulkan initialized successfully with C bridge!")
+        println("Starting render loop...")
+        println("")
+
+        // Enter main rendering loop
+        vk_main_loop()
+
+        // Cleanup
+        vk_cleanup()
+        println("Application terminated normally.")
+      } else {
+        println("Failed to initialize Vulkan!")
+        println("Make sure you have:")
+        println("  - A Vulkan-compatible GPU")
+        println("  - Vulkan drivers installed")
+        println("  - GLFW library available")
+      }
+    }
   }
 }
