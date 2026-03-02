@@ -7,7 +7,7 @@
   "keywords": [],
   "description": "",
   "deps": {
-    "moonbit/vulkan": {
+    "moonbit_vk/vulkan": {
       "path": "../vulkan"
     }
   }

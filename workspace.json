@@ -5,8 +5,7 @@
   "workspace": {
     "members": [
       "example",
-      "vulkan",
-      "demo_triangle"
+      "vulkan"
     ]
   }
 }
