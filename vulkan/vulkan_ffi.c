@@ -558,6 +558,64 @@ int32_t vulkan_vkCreateDeviceDirect(int64_t physical_device, int32_t queue_famil
     return (int32_t)result;
 }
 
+// Simplified version of vkCreateDeviceDirect - no extensions, just basic device
+int32_t vulkan_vkCreateDeviceDirectSimple(int64_t physical_device, int32_t queue_family, int32_t device_idx) {
+    printf("DEBUG: vkCreateDeviceDirectSimple called - queue_family: %d\n", queue_family);
+    fflush(stdout);
+
+    VkPhysicalDevice pd = (VkPhysicalDevice)(uintptr_t)physical_device;
+    void* device_buffer = index_to_ptr(device_idx);
+
+    // Allocate queue create info on heap
+    float* queue_priority = (float*)malloc(sizeof(float));
+    *queue_priority = 1.0f;
+    
+    VkDeviceQueueCreateInfo* queue_ci = (VkDeviceQueueCreateInfo*)malloc(sizeof(VkDeviceQueueCreateInfo));
+    memset(queue_ci, 0, sizeof(VkDeviceQueueCreateInfo));
+    queue_ci->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_ci->pNext = NULL;
+    queue_ci->flags = 0;
+    queue_ci->queueFamilyIndex = (uint32_t)queue_family;
+    queue_ci->queueCount = 1;
+    queue_ci->pQueuePriorities = queue_priority;
+
+    // Create device create info on heap - NO EXTENSIONS
+    VkDeviceCreateInfo* device_ci = (VkDeviceCreateInfo*)malloc(sizeof(VkDeviceCreateInfo));
+    memset(device_ci, 0, sizeof(VkDeviceCreateInfo));
+    device_ci->sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_ci->pNext = NULL;
+    device_ci->flags = 0;
+    device_ci->queueCreateInfoCount = 1;
+    device_ci->pQueueCreateInfos = queue_ci;
+    device_ci->enabledLayerCount = 0;
+    device_ci->ppEnabledLayerNames = NULL;
+    device_ci->enabledExtensionCount = 0;  // NO EXTENSIONS
+    device_ci->ppEnabledExtensionNames = NULL;
+    device_ci->pEnabledFeatures = VK_NULL_HANDLE;
+
+    printf("  Calling vkCreateDevice (no extensions)...\n");
+    printf("  physical_device: %p\n", (void*)pd);
+    printf("  device_ci.sType: %u\n", device_ci->sType);
+    printf("  device_ci.pQueueCreateInfos: %p\n", (void*)device_ci->pQueueCreateInfos);
+    printf("  device_buffer: %p\n", device_buffer);
+    fflush(stdout);
+
+    VkResult result = vkCreateDevice(pd, (const VkDeviceCreateInfo*)device_ci, NULL, (VkDevice*)device_buffer);
+
+    printf("  vkCreateDevice result: %d\n", result);
+    if (result == VK_SUCCESS) {
+        printf("  Device created successfully: %p\n", *(void**)device_buffer);
+    }
+    fflush(stdout);
+
+    // Clean up
+    free(queue_ci);
+    free(queue_priority);
+    free(device_ci);
+
+    return (int32_t)result;
+}
+
 // vkGetDeviceQueue wrapper - accepts device as int64 handle directly
 void vulkan_vkGetDeviceQueueArray(int64_t device, int32_t queue_family, int32_t queue_index, int32_t queue_out_idx) {
     VkDevice device_ptr = (VkDevice)(uintptr_t)device;

@@ -9,7 +9,7 @@
 extern "C" fn vkEnumeratePhysicalDevices(instance : Int64, pPhysicalDeviceCount : Int, pPhysicalDevices : Int) -> Int = "vulkan_vkEnumeratePhysicalDevices"
 extern "C" fn vkGetPhysicalDeviceProperties(physicalDevice : Int64, pProperties : Int) -> Unit = "vulkan_vkGetPhysicalDeviceProperties"
 extern "C" fn vkGetPhysicalDeviceFeatures(physicalDevice : Int64, pFeatures : Int) -> Unit = "vulkan_vkGetPhysicalDeviceFeatures"
-extern "C" fn vkCreateDeviceDirect(physicalDevice : Int64, queueFamily : Int, deviceIdx : Int) -> Int = "vulkan_vkCreateDeviceDirect"
+extern "C" fn vkCreateDeviceDirectSimple(physicalDevice : Int64, queueFamily : Int, deviceIdx : Int) -> Int = "vulkan_vkCreateDeviceDirectSimple"
 extern "C" fn vkDestroyDevice(device : Int64, pAllocator : Int) -> Unit = "vulkan_vkDestroyDevice"
 
 // Memory helper functions (defined in vulkan_ffi.c)
@@ -152,8 +152,8 @@ pub fn create_logical_device(physical_device : Int64, queue_family_index : Int) 
   // Allocate buffer to receive device handle
   let device_buffer = vulkan_alloc_struct(8)
 
-  // Create device using the simplified Direct API
-  let result = vkCreateDeviceDirect(physical_device, queue_family_index, device_buffer)
+  // Create device using the simplified Direct API (no extensions)
+  let result = vkCreateDeviceDirectSimple(physical_device, queue_family_index, device_buffer)
 
   if result != VK_SUCCESS {
     return DeviceError("Failed to create logical device, error code: " + result.to_string())
