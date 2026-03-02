@@ -99,6 +99,20 @@ fn main() -> Unit {
                                 println("")
                                 println("Phase 1-9 complete!")
 
+                                // Phase 10: Create graphics pipeline (testing - currently disabled due to crash)
+                                // TODO: Fix vkEnumeratePhysicalDevices crash and pipeline layout parsing
+                                println("=== Step 10: Skipping graphics pipeline (debugging in progress) ===")
+                                // match create_graphics_pipeline(device, render_pass, 800, 600) {
+                                //   GraphicsPipelineCreated(pipeline, pipeline_layout) => {
+                                //     println("Graphics pipeline created! Pipeline: " + pipeline.to_string() +
+                                //             ", Layout: " + pipeline_layout.to_string())
+                                //     vulkan_pipeline::destroy_graphics_pipeline(device, pipeline, pipeline_layout)
+                                //   }
+                                //   GraphicsPipelineError(msg) => {
+                                //     println("Failed to create graphics pipeline: " + msg)
+                                //   }
+                                // }
+
                                 // Cleanup render pass
                                 destroy_render_pass(device, render_pass)
                               }
