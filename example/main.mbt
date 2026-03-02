@@ -22,18 +22,38 @@ fn print_banner() -> Unit {
 
 fn main() -> Unit {
   print_banner()
-  
+
+  // Test MoonBit Vulkan instance creation
+  println("Testing MoonBit Vulkan instance creation...")
+  let instance_result = create_vulkan_instance()
+
+  match instance_result {
+    InstanceCreated(instance) => {
+      println("Success! Instance handle: " + instance.to_string())
+
+      // Clean up
+      destroy_vulkan_instance(instance)
+    }
+    InstanceError(msg) => {
+      println("Error: " + msg)
+    }
+  }
+
+  println("")
+  println("Now running original demo with C FFI...")
+  println("")
+
   // Initialize Vulkan with 800x600 window
   let initialized = vk_init("MoonBit Vulkan Triangle", 800, 600)
-  
+
   if initialized {
     println("Vulkan initialized successfully!")
     println("Starting render loop...")
     println("")
-    
+
     // Enter main rendering loop
     vk_main_loop()
-    
+
     // Cleanup
     vk_cleanup()
     println("Application terminated normally.")
