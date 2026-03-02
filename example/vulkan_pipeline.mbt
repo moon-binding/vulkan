@@ -14,6 +14,10 @@ extern "C" fn vk_create_framebuffers_bridge(device : Int64, renderPass : Int64, 
 // Bridge function to destroy framebuffers
 extern "C" fn vk_destroy_framebuffers_bridge(device : Int64, framebuffers : Int64, imageCount : Int) -> Int = "moonbit_vk_destroy_framebuffers_bridge"
 
+// Helper functions to split pipeline result
+extern "C" fn vulkan_get_pipeline_from_result(result : Int64) -> Int64 = "vulkan_get_pipeline_from_result"
+extern "C" fn vulkan_get_pipeline_layout_from_result(result : Int64) -> Int64 = "vulkan_get_pipeline_layout_from_result"
+
 // Result type for graphics pipeline creation
 pub enum GraphicsPipelineResult {
   GraphicsPipelineCreated(Int64, Int64)  // (pipeline, pipelineLayout)
@@ -36,9 +40,10 @@ pub fn create_graphics_pipeline(device : Int64, render_pass : Int64, width : Int
     return GraphicsPipelineError("Failed to create graphics pipeline")
   }
 
-  // Parse result: pipeline handle in lower 48 bits, pipeline layout in upper 16 bits
-  let pipeline = result & 0xFFFFFFFFFFFF
-  let pipeline_layout = result >> 48
+  // Parse result: pipelineLayout in upper 16 bits, pipeline in lower 48 bits
+  // From C bridge: return ((int64_t)pipelineLayout << 48) | (int64_t)graphicsPipeline;
+  let pipeline_layout = vulkan_get_pipeline_layout_from_result(result)
+  let pipeline = vulkan_get_pipeline_from_result(result)
 
   println("Graphics pipeline created! Handle: " + pipeline.to_string())
   GraphicsPipelineCreated(pipeline, pipeline_layout)

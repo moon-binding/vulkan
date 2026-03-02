@@ -1246,6 +1246,15 @@ int moonbit_vk_destroy_graphics_pipeline_bridge(int64_t device, int64_t pipeline
     return 1;
 }
 
+// Helper functions to split pipeline result
+int64_t vulkan_get_pipeline_from_result(int64_t result) {
+    return result & 0xFFFFFFFFFFFF;
+}
+
+int64_t vulkan_get_pipeline_layout_from_result(int64_t result) {
+    return result >> 48;
+}
+
 // Bridge function for framebuffers creation
 int64_t moonbit_vk_create_framebuffers_bridge(int64_t device, int64_t renderPass, int64_t imageViews, int imageCount, int width, int height) {
     printf("Creating framebuffers (bridge)\n");
