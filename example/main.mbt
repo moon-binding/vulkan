@@ -79,18 +79,33 @@ fn main() -> Unit {
                           ImageViewsCreated(image_views, _) => {
                             println("Image views created! Pointer: " + image_views.to_string())
 
-                            println("")
-                            println("Progress summary:")
-                            println("  ✓ GLFW window creation - MoonBit")
-                            println("  ✓ Vulkan instance creation - MoonBit")
-                            println("  ✓ Surface creation - MoonBit")
-                            println("  ✓ Physical device selection - MoonBit")
-                            println("  ✓ Queue family enumeration - MoonBit")
-                            println("  ✓ Logical device creation - MoonBit")
-                            println("  ✓ Swapchain creation - MoonBit")
-                            println("  ✓ Image views creation - MoonBit")
-                            println("")
-                            println("Phase 1-8 complete!")
+                            // Create render pass
+                            println("=== Step 9: Creating render pass ===")
+                            match create_render_pass(device, format) {
+                              RenderPassCreated(render_pass) => {
+                                println("Render pass created! Handle: " + render_pass.to_string())
+
+                                println("")
+                                println("Progress summary:")
+                                println("  ✓ GLFW window creation - MoonBit")
+                                println("  ✓ Vulkan instance creation - MoonBit")
+                                println("  ✓ Surface creation - MoonBit")
+                                println("  ✓ Physical device selection - MoonBit")
+                                println("  ✓ Queue family enumeration - MoonBit")
+                                println("  ✓ Logical device creation - MoonBit")
+                                println("  ✓ Swapchain creation - MoonBit")
+                                println("  ✓ Image views creation - MoonBit")
+                                println("  ✓ Render pass creation - MoonBit")
+                                println("")
+                                println("Phase 1-9 complete!")
+
+                                // Cleanup render pass
+                                destroy_render_pass(device, render_pass)
+                              }
+                              RenderPassError(msg) => {
+                                println("Failed to create render pass: " + msg)
+                              }
+                            }
 
                             // Cleanup image views
                             destroy_image_views(device, image_views, image_count)

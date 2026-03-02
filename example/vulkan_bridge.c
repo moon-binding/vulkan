@@ -610,6 +610,56 @@ int moonbit_vk_destroy_image_views_bridge(int64_t device, int64_t imageViews, in
     return 1;
 }
 
+// Bridge function for MoonBit render pass creation
+int64_t moonbit_vk_create_render_pass_bridge(int64_t device, int format) {
+    printf("Creating render pass (bridge)\n");
+    printf("  Device: %p\n", (void*)device);
+    printf("  Format: %d\n", format);
+
+    VkAttachmentDescription colorAttachment = {0};
+    colorAttachment.format = (VkFormat)format;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef = {0};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {0};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+
+    VkRenderPassCreateInfo createInfo = {0};
+    createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    createInfo.attachmentCount = 1;
+    createInfo.pAttachments = &colorAttachment;
+    createInfo.subpassCount = 1;
+    createInfo.pSubpasses = &subpass;
+
+    VkRenderPass renderPass = VK_NULL_HANDLE;
+    VkResult result = vkCreateRenderPass((VkDevice)device, &createInfo, NULL, &renderPass);
+    if (!check_vk_result(result, "Failed to create render pass (bridge)")) {
+        return 0;
+    }
+
+    printf("Render pass created (bridge)\n");
+    return (int64_t)renderPass;
+}
+
+// Bridge function to destroy render pass
+int moonbit_vk_destroy_render_pass_bridge(int64_t device, int64_t renderPass) {
+    printf("Destroying render pass (bridge)\n");
+    vkDestroyRenderPass((VkDevice)device, (VkRenderPass)renderPass, NULL);
+    printf("Render pass destroyed (bridge)\n");
+    return 1;
+}
+
 // ============== Swapchain ==============
 
 static VkSurfaceFormatKHR choose_swap_surface_format(VkSurfaceFormatKHR* formats, uint32_t count) {
