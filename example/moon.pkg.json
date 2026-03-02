@@ -1,5 +1,9 @@
 {
-  "import": [],
+  "import": [
+    {
+      "path": "../vulkan"
+    }
+  ],
   "is-main": true,
   "link": {
     "native": {

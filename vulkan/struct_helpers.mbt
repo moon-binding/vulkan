@@ -83,15 +83,15 @@ pub fn set_instance_extensions(create_info : Int, count : Int, names_idx : Int) 
 
 // Allocate and initialize VkDeviceQueueCreateInfo
 pub fn alloc_device_queue_create_info() -> Int {
-  let size = 48 // sizeof(VkDeviceQueueCreateInfo) = 6 * 8 bytes
+  let size = 40 // sizeof(VkDeviceQueueCreateInfo) = 40 bytes (not 48!)
   let ptr = vulkan_alloc_struct(size)
 
-  // Initialize fields
+  // Initialize fields with correct offsets based on Vulkan headers
   put_int32(ptr, 0, VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO) // sType
   put_int64(ptr, 8, 0)                                        // pNext
   put_int32(ptr, 16, 0)                                       // flags
-  put_int32(ptr, 24, 0)                                       // queueFamilyIndex
-  put_int32(ptr, 28, 1)                                       // queueCount
+  put_int32(ptr, 20, 0)                                       // queueFamilyIndex (offset 20, not 24!)
+  put_int32(ptr, 24, 1)                                       // queueCount (offset 24, not 28!)
   put_int64(ptr, 32, 0)                                       // pQueuePriorities
 
   ptr
@@ -99,12 +99,12 @@ pub fn alloc_device_queue_create_info() -> Int {
 
 // Set queue family index
 pub fn set_queue_family_index(queue_info : Int, index : Int) -> Unit {
-  put_int32(queue_info, 24, index)
+  put_int32(queue_info, 20, index)    // offset 20, not 24!
 }
 
 // Set queue count
 pub fn set_queue_count(queue_info : Int, count : Int) -> Unit {
-  put_int32(queue_info, 28, count)
+  put_int32(queue_info, 24, count)    // offset 24, not 28!
 }
 
 // Set queue priorities pointer
@@ -114,34 +114,34 @@ pub fn set_queue_priorities(queue_info : Int, priorities : Int) -> Unit {
 
 // Allocate and initialize VkDeviceCreateInfo
 pub fn alloc_device_create_info() -> Int {
-  let size = 72 // sizeof(VkDeviceCreateInfo) = 9 * 8 bytes
+  let size = 72 // sizeof(VkDeviceCreateInfo) = 72 bytes (not 9 * 8!)
   let ptr = vulkan_alloc_struct(size)
 
-  // Initialize fields
+  // Initialize fields with correct offsets based on Vulkan headers
   put_int32(ptr, 0, VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)       // sType
   put_int64(ptr, 8, 0)                                        // pNext
   put_int32(ptr, 16, 0)                                       // flags
-  put_int32(ptr, 24, 0)                                       // queueCreateInfoCount
-  put_int64(ptr, 32, 0)                                       // pQueueCreateInfos
-  put_int32(ptr, 40, 0)                                       // enabledLayerCount
-  put_int64(ptr, 48, 0)                                       // ppEnabledLayerNames
-  put_int32(ptr, 56, 0)                                       // enabledExtensionCount
-  put_int64(ptr, 64, 0)                                       // ppEnabledExtensionNames
-  put_int64(ptr, 72, 0)                                       // pEnabledFeatures
+  put_int32(ptr, 20, 0)                                       // queueCreateInfoCount (offset 20, not 24!)
+  put_int64(ptr, 24, 0)                                       // pQueueCreateInfos (offset 24, not 32!)
+  put_int32(ptr, 32, 0)                                       // enabledLayerCount (offset 32, not 40!)
+  put_int64(ptr, 40, 0)                                       // ppEnabledLayerNames (offset 40, not 48!)
+  put_int32(ptr, 48, 0)                                       // enabledExtensionCount
+  put_int64(ptr, 56, 0)                                       // ppEnabledExtensionNames
+  put_int64(ptr, 64, 0)                                       // pEnabledFeatures
 
   ptr
 }
 
 // Set queue create infos
 pub fn set_device_queues(create_info : Int, count : Int, queues : Int) -> Unit {
-  put_int32(create_info, 24, count)
-  put_int64(create_info, 32, queues)
+  put_int32(create_info, 20, count)    // offset 20, not 24!
+  put_int64(create_info, 24, queues)   // offset 24, not 32!
 }
 
 // Set device extensions
 pub fn set_device_extensions(create_info : Int, count : Int, names : Int) -> Unit {
-  put_int32(create_info, 48, count)
-  put_int64(create_info, 56, names)
+  put_int32(create_info, 48, count)   // offset 48
+  put_int64(create_info, 56, names)    // offset 56
 }
 
 // Set pointer in array (helper for setting extension names)
@@ -197,6 +197,7 @@ pub fn set_swapchain_min_image_count(create_info : Int, count : Int) -> Unit {
 // Memory access helpers (using C functions)
 pub extern "C" fn put_int32(ptr : Int, offset : Int, value : Int) -> Unit = "vulkan_put_int32"
 pub extern "C" fn put_int64(ptr : Int, offset : Int, value : Int) -> Unit = "vulkan_put_int64"
+pub extern "C" fn put_int64_lh(ptr : Int, offset : Int, low : Int, high : Int) -> Unit = "vulkan_put_int64_lh"
 pub extern "C" fn put_ptr(ptr : Int, offset : Int, ptr_idx : Int) -> Unit = "vulkan_set_ptr"
 pub extern "C" fn get_int32(ptr : Int, offset : Int) -> Int = "vulkan_get_int32"
 pub extern "C" fn get_int64(ptr : Int, offset : Int) -> Int64 = "vulkan_get_int64"

@@ -31,6 +31,11 @@ pub const VK_SUBPASS_EXTERNAL : Int = -1
 pub const VK_MAX_DEVICE_GROUP_SIZE : Int = 32
 pub const VK_LUID_SIZE : Int = 8
 
+// Version utilities
+pub fn make_version(major : Int, minor : Int, patch : Int) -> Int {
+  (major << 22) | (minor << 12) | patch
+}
+
 // Shader stage flags
 pub const VK_SHADER_STAGE_VERTEX_BIT : Int = 0x00000001
 pub const VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT : Int = 0x00000002

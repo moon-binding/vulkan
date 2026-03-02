@@ -93,13 +93,23 @@ int64_t vulkan_get_int64(int32_t idx, int32_t offset) {
 
 // String creation helper
 int32_t vulkan_create_string(const char* s) {
-    if (!s) return -1;
+    printf("DEBUG: vulkan_create_string called with s = %p\n", (void*)s);
+    if (!s) {
+        printf("  s is NULL\n");
+        return -1;
+    }
+    printf("  s as string = %s\n", s);
     size_t len = strlen(s);
+    printf("  strlen(s) = %zu\n", len);
     char* str = malloc(len + 1);
     if (str) {
         strcpy(str, s);
-        return ptr_to_index(str);
+        printf("  Copied string: %s\n", str);
+        int32_t idx = ptr_to_index(str);
+        printf("  Returning index = %d\n", idx);
+        return idx;
     }
+    printf("  malloc failed!\n");
     return -1;
 }
 
@@ -146,10 +156,24 @@ void vulkan_set_float(int32_t idx, int32_t offset, float value) {
 
 // Set pointer field in struct (by index)
 void vulkan_set_ptr(int32_t idx, int32_t offset, int32_t ptr_idx) {
+    printf("DEBUG: vulkan_set_ptr called: idx=%d, offset=%d, ptr_idx=%d\n", idx, offset, ptr_idx);
     void* ptr = index_to_ptr(idx);
     void* target = index_to_ptr(ptr_idx);
+    printf("  ptr = %p, target = %p\n", ptr, target);
+
+    // Print target memory for debugging
+    if (ptr_idx >= 0 && target) {
+        // Print first few bytes of target to see if it's initialized correctly
+        uint8_t* bytes = (uint8_t*)target;
+        printf("  First 8 bytes of target: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+               bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]);
+        uint32_t* u32ptr = (uint32_t*)target;
+        printf("  As uint32: %u, %u\n", u32ptr[0], u32ptr[1]);
+    }
+
     if (ptr) {
         *(int64_t*)((uint8_t*)ptr + offset) = (int64_t)(intptr_t)target;
+        printf("  Stored target = %ld (0x%lx) at offset %d\n", (int64_t)(intptr_t)target, (int64_t)(intptr_t)target, offset);
     }
 }
 
@@ -728,24 +752,105 @@ int32_t vulkan_vkCreateDevice(int64_t physical_device, int32_t create_info_idx, 
     int32_t queues_idx = (int32_t)(intptr_t)create_info->pQueueCreateInfos;
     if (queues_idx >= 0) {
         void* queues_ptr = index_to_ptr(queues_idx);
-        create_info->pQueueCreateInfos = (VkDeviceQueueCreateInfo*)queues_ptr;
         printf("  Converted queues_idx=%d to queues_ptr=%p\n", queues_idx, queues_ptr);
+
+        // Print the memory at queues_ptr
+        uint64_t* queues_arr = (uint64_t*)queues_ptr;
+        printf("  queues_arr[0] = %ld (0x%lx)\n", queues_arr[0], queues_arr[0]);
+
+        // Dereference queues_arr[0] to get the VkDeviceQueueCreateInfo pointer
+        VkDeviceQueueCreateInfo* qci = (VkDeviceQueueCreateInfo*)(intptr_t)queues_arr[0];
+        printf("  qci = %p\n", qci);
+        printf("  qci->sType = %u\n", qci->sType);
+        printf("  qci->queueFamilyIndex = %u\n", qci->queueFamilyIndex);
+        printf("  qci->queueCount = %u\n", qci->queueCount);
+
+        create_info->pQueueCreateInfos = qci;
     }
     
     int32_t extensions_idx = (int32_t)(intptr_t)create_info->ppEnabledExtensionNames;
-    if (extensions_idx >= 0) {
+    printf("  extensions_idx = %d\n", extensions_idx);
+    if (extensions_idx >= 0 && create_info->enabledExtensionCount > 0) {
+        printf("  Processing extensions...\n");
+        fflush(stdout);
         void* extensions_ptr = index_to_ptr(extensions_idx);
-        create_info->ppEnabledExtensionNames = (const char* const*)extensions_ptr;
         printf("  Converted extensions_idx=%d to extensions_ptr=%p\n", extensions_idx, extensions_ptr);
+
+        // Need to convert string indices in the array to actual string pointers
+        // The array contains indices (stored as int64), but Vulkan expects char* pointers
+        // So we need to convert the indices to actual pointers
+        int64_t* ext_indices = (int64_t*)extensions_ptr;
+        printf("  Before conversion: ext_indices[0] = %ld (0x%lx)\n", ext_indices[0], ext_indices[0]);
+
+        // The value stored in ext_indices[i] is the result of vulkan_set_ptr,
+        // which is (int64_t)(intptr_t)target, where target = index_to_ptr(str_idx).
+        // So ext_indices[i] is actually the actual pointer, not the index!
+        // We don't need to convert it again!
+
+        for (uint32_t i = 0; i < create_info->enabledExtensionCount; i++) {
+            char* str_ptr = (char*)ext_indices[i];
+            printf("    Extension %d: ptr=%p, str=%s\n", i, str_ptr, str_ptr ? str_ptr : "(null)");
+        }
+
+        // The ext_indices array already contains the correct pointers!
+        create_info->ppEnabledExtensionNames = (const char* const*)ext_indices;
+    } else {
+        printf("  extensions_idx=%d, enabledExtensionCount=%u\n", extensions_idx, create_info->enabledExtensionCount);
+        // If no extensions, set ppEnabledExtensionNames to NULL
+        if (create_info->enabledExtensionCount == 0) {
+            create_info->ppEnabledExtensionNames = NULL;
+            printf("  Set ppEnabledExtensionNames to NULL\n");
+        }
     }
     
     printf("  After conversion:\n");
     printf("    queueCreateInfoCount=%u, pQueueCreateInfos=%p\n", create_info->queueCreateInfoCount, (void*)create_info->pQueueCreateInfos);
     printf("    enabledExtensionCount=%u, ppEnabledExtensionNames=%p\n", create_info->enabledExtensionCount, (void*)create_info->ppEnabledExtensionNames);
+
+    // Print extension names for debugging
+    if (create_info->enabledExtensionCount > 0 && create_info->ppEnabledExtensionNames != NULL) {
+        printf("    Extension names:\n");
+        for (uint32_t i = 0; i < create_info->enabledExtensionCount; i++) {
+            const char* ext_name = create_info->ppEnabledExtensionNames[i];
+            printf("      [%u] %s\n", i, ext_name ? ext_name : "(null)");
+        }
+    }
+    fflush(stdout);
+
+    printf("  About to call vkCreateDevice...\n");
+    printf("  create_info = %p\n", (void*)create_info);
+    printf("  create_info->sType = %u\n", create_info->sType);
+    printf("  create_info->pNext = %p\n", create_info->pNext);
+    printf("  create_info->flags = %u\n", create_info->flags);
+    printf("  create_info->queueCreateInfoCount = %u\n", create_info->queueCreateInfoCount);
+    printf("  create_info->pQueueCreateInfos = %p\n", create_info->pQueueCreateInfos);
+    printf("  create_info->enabledLayerCount = %u\n", create_info->enabledLayerCount);
+    printf("  create_info->ppEnabledLayerNames = %p\n", create_info->ppEnabledLayerNames);
+    printf("  create_info->enabledExtensionCount = %u\n", create_info->enabledExtensionCount);
+    printf("  create_info->ppEnabledExtensionNames = %p\n", create_info->ppEnabledExtensionNames);
+    printf("  create_info->pEnabledFeatures = %p\n", create_info->pEnabledFeatures);
     fflush(stdout);
 
     VkDevice device;
+    printf("  About to call vkCreateDevice...\n");
+    fflush(stdout);
+
+    // Check if vkCreateDevice is valid
+    printf("  vkCreateDevice function pointer = %p\n", (void*)vkCreateDevice);
+    fflush(stdout);
+
+    // Call vkCreateDevice with try-catch style error handling
+    printf("  Calling vkCreateDevice...\n");
+    fflush(stdout);
+
     VkResult result = vkCreateDevice(phys_dev, create_info, NULL, &device);
+
+    printf("  vkCreateDevice returned: %d\n", result);
+    printf("  device = %p\n", (void*)device);
+    fflush(stdout);
+
+    printf("  vkCreateDevice returned: %d\n", result);
+    fflush(stdout);
     
     printf("  vkCreateDevice returned: %d\n", result);
     printf("  device created: %p\n", (void*)device);
