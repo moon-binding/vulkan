@@ -257,9 +257,9 @@ pub fn alloc_shader_stage_info() -> Int {
 }
 
 // Helper to set shader stage
-pub fn set_shader_stage(stage_info : Int, stage : Int, module : Int, name : Int) -> Unit {
+pub fn set_shader_stage(stage_info : Int, stage : Int, module : Int64, name : Int) -> Unit {
   put_int32(stage_info, 24, stage)
-  put_int64(stage_info, 32, module)
+  put_int64(stage_info, 32, module.to_int())
   put_int64(stage_info, 40, name)
 }
 
@@ -420,11 +420,8 @@ pub fn alloc_image_view_info() -> Int {
 }
 
 // Helper to set image view properties
-pub fn set_image_view_properties(image_view : Int, image : Int, format : Int, aspect_mask : Int) -> Unit {
-  put_int64(image_view, 24, image)
+pub fn set_image_view_properties(image_view : Int, image : Int64, format : Int, aspect_mask : Int64) -> Unit {
+  put_int64(image_view, 24, image.to_int())
   put_int32(image_view, 36, format)
-  put_int64(image_view, 56, aspect_mask)
+  put_int64(image_view, 56, aspect_mask.to_int())
 }
-
-// External function to set float in struct (defined in vulkan_ffi.c)
-extern "C" fn vulkan_set_float(ptr : Int, offset : Int, value : Float) -> Unit = "vulkan_set_float"

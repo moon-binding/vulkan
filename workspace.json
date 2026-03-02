@@ -4,8 +4,9 @@
   },
   "workspace": {
     "members": [
-      "src",
-      "test_triangle_native"
+      "example",
+      "vulkan",
+      "demo_triangle"
     ]
   }
 }

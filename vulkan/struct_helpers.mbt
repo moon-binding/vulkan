@@ -174,8 +174,8 @@ pub fn alloc_swapchain_create_info() -> Int {
 }
 
 // Set surface in swapchain create info
-pub fn set_swapchain_surface(create_info : Int, surface : Int) -> Unit {
-  put_int64(create_info, 24, surface)
+pub fn set_swapchain_surface(create_info : Int, surface : Int64) -> Unit {
+  put_int64(create_info, 24, surface.to_int())
 }
 
 // Set image extent
@@ -195,7 +195,90 @@ pub extern "C" fn put_int64(ptr : Int, offset : Int, value : Int) -> Unit = "vul
 pub extern "C" fn put_ptr(ptr : Int, offset : Int, ptr_idx : Int) -> Unit = "vulkan_set_ptr"
 pub extern "C" fn get_int32(ptr : Int, offset : Int) -> Int = "vulkan_get_int32"
 pub extern "C" fn get_int64(ptr : Int, offset : Int) -> Int64 = "vulkan_get_int64"
+pub extern "C" fn vulkan_set_float(ptr : Int, offset : Int, value : Float) -> Unit = "vulkan_set_float"
 
 // Utility function to create string for Vulkan
 pub extern "C" fn vulkan_create_string(s : String) -> Int = "vulkan_create_string"
 pub extern "C" fn vulkan_free_string(ptr : Int) -> Unit = "vulkan_free_string"
+
+// Helper to allocate surface capabilities structure
+pub fn alloc_surface_capabilities() -> Int {
+  let size = 64 // sizeof(VkSurfaceCapabilitiesKHR) = 8 * 8 bytes
+  let ptr = vulkan_alloc_struct(size)
+  ptr
+}
+
+// Helper to read surface capabilities
+pub fn get_surface_capabilities_minImageCount(caps : Int) -> Int {
+  get_int32(caps, 0)
+}
+
+pub fn get_surface_capabilities_maxImageCount(caps : Int) -> Int {
+  get_int32(caps, 4)
+}
+
+pub fn get_surface_capabilities_currentExtent_width(caps : Int) -> Int {
+  get_int32(caps, 8)
+}
+
+pub fn get_surface_capabilities_currentExtent_height(caps : Int) -> Int {
+  get_int32(caps, 12)
+}
+
+pub fn get_surface_capabilities_minImageExtent_width(caps : Int) -> Int {
+  get_int32(caps, 16)
+}
+
+pub fn get_surface_capabilities_minImageExtent_height(caps : Int) -> Int {
+  get_int32(caps, 20)
+}
+
+pub fn get_surface_capabilities_maxImageExtent_width(caps : Int) -> Int {
+  get_int32(caps, 24)
+}
+
+pub fn get_surface_capabilities_maxImageExtent_height(caps : Int) -> Int {
+  get_int32(caps, 28)
+}
+
+// Helper to allocate surface format structure
+pub fn alloc_surface_format() -> Int {
+  let size = 32 // sizeof(VkSurfaceFormatKHR) = 4 * 8 bytes
+  let ptr = vulkan_alloc_struct(size)
+  ptr
+}
+
+// Helper to read surface format
+pub fn get_surface_format(format : Int) -> Int {
+  get_int32(format, 0)
+}
+
+pub fn get_surface_colorSpace(format : Int) -> Int {
+  get_int32(format, 4)
+}
+
+// Helper to set swapchain format and color space
+pub fn set_swapchain_format(create_info : Int, format : Int, color_space : Int) -> Unit {
+  put_int32(create_info, 36, format)
+  put_int32(create_info, 40, color_space)
+}
+
+// Helper to set swapchain present mode
+pub fn set_swapchain_present_mode(create_info : Int, present_mode : Int) -> Unit {
+  put_int32(create_info, 88, present_mode)
+}
+
+// Helper to set swapchain image usage
+pub fn set_swapchain_image_usage(create_info : Int, usage : Int) -> Unit {
+  put_int32(create_info, 56, usage)
+}
+
+// Helper to set render pass in begin info
+pub fn set_render_pass(render_pass_begin : Int, render_pass : Int64) -> Unit {
+  put_int64(render_pass_begin, 16, render_pass.to_int())
+}
+
+// Helper to set framebuffer in begin info
+pub fn set_framebuffer(render_pass_begin : Int, framebuffer : Int64) -> Unit {
+  put_int64(render_pass_begin, 24, framebuffer.to_int())
+}

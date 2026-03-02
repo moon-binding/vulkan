@@ -487,6 +487,13 @@ int32_t vulkan_vkCreateDeviceDirect(int64_t physical_device, int32_t queue_famil
     queue_ci.queueCount = 1;
     queue_ci.pQueuePriorities = &queue_priority;
 
+    // Enable swapchain extension
+    const char* device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    const uint32_t extension_count = 1;
+
+    printf("  Enabling device extension: %s\n", VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    fflush(stdout);
+
     // Create device create info on stack
     VkDeviceCreateInfo device_ci;
     memset(&device_ci, 0, sizeof(VkDeviceCreateInfo));
@@ -497,8 +504,8 @@ int32_t vulkan_vkCreateDeviceDirect(int64_t physical_device, int32_t queue_famil
     device_ci.pQueueCreateInfos = &queue_ci;
     device_ci.enabledLayerCount = 0;
     device_ci.ppEnabledLayerNames = NULL;
-    device_ci.enabledExtensionCount = 0;
-    device_ci.ppEnabledExtensionNames = NULL;
+    device_ci.enabledExtensionCount = extension_count;
+    device_ci.ppEnabledExtensionNames = device_extensions;
     device_ci.pEnabledFeatures = VK_NULL_HANDLE;
 
     printf("  Calling vkCreateDevice with physical_device: %p\n", (void*)pd);
@@ -535,3 +542,205 @@ void vulkan_vkDestroyDevice(int64_t device, int32_t allocator) {
     VkDevice device_ptr = (VkDevice)(uintptr_t)device;
     vkDestroyDevice(device_ptr, NULL);
 }
+
+// vkGetPhysicalDeviceSurfaceCapabilitiesKHR wrapper
+int32_t vulkan_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(int64_t physical_device, int64_t surface, int32_t capabilities_idx) {
+    VkPhysicalDevice pd = (VkPhysicalDevice)(uintptr_t)physical_device;
+    VkSurfaceKHR surf = (VkSurfaceKHR)(uintptr_t)surface;
+    VkSurfaceCapabilitiesKHR* caps = (VkSurfaceCapabilitiesKHR*)index_to_ptr(capabilities_idx);
+
+    printf("DEBUG: vkGetPhysicalDeviceSurfaceCapabilitiesKHR called\n");
+    fflush(stdout);
+
+    VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pd, surf, caps);
+
+    printf("  minImageCount: %u, maxImageCount: %u\n", caps->minImageCount, caps->maxImageCount);
+    printf("  currentExtent: %ux%u\n", caps->currentExtent.width, caps->currentExtent.height);
+    fflush(stdout);
+
+    return (int32_t)result;
+}
+
+// vkGetPhysicalDeviceSurfaceFormatsKHR wrapper
+int32_t vulkan_vkGetPhysicalDeviceSurfaceFormatsKHR(int64_t physical_device, int64_t surface, int32_t format_count_idx, int32_t formats_idx) {
+    VkPhysicalDevice pd = (VkPhysicalDevice)(uintptr_t)physical_device;
+    VkSurfaceKHR surf = (VkSurfaceKHR)(uintptr_t)surface;
+
+    uint32_t* count_ptr = (uint32_t*)index_to_ptr(format_count_idx);
+    VkSurfaceFormatKHR* formats = (VkSurfaceFormatKHR*)index_to_ptr(formats_idx);
+
+    printf("DEBUG: vkGetPhysicalDeviceSurfaceFormatsKHR called\n");
+    fflush(stdout);
+
+    VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(pd, surf, count_ptr, formats);
+
+    printf("  Format count: %u\n", *count_ptr);
+    if (formats && *count_ptr > 0) {
+        printf("  First format: %u, colorSpace: %u\n", formats[0].format, formats[0].colorSpace);
+    }
+    fflush(stdout);
+
+    return (int32_t)result;
+}
+
+// vkGetPhysicalDeviceSurfacePresentModesKHR wrapper
+int32_t vulkan_vkGetPhysicalDeviceSurfacePresentModesKHR(int64_t physical_device, int64_t surface, int32_t mode_count_idx, int32_t modes_idx) {
+    VkPhysicalDevice pd = (VkPhysicalDevice)(uintptr_t)physical_device;
+    VkSurfaceKHR surf = (VkSurfaceKHR)(uintptr_t)surface;
+
+    uint32_t* count_ptr = (uint32_t*)index_to_ptr(mode_count_idx);
+    VkPresentModeKHR* modes = (VkPresentModeKHR*)index_to_ptr(modes_idx);
+
+    printf("DEBUG: vkGetPhysicalDeviceSurfacePresentModesKHR called\n");
+    fflush(stdout);
+
+    VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(pd, surf, count_ptr, modes);
+
+    printf("  Present mode count: %u\n", *count_ptr);
+    if (modes && *count_ptr > 0) {
+        printf("  First mode: %u\n", modes[0]);
+    }
+    fflush(stdout);
+
+    return (int32_t)result;
+}
+
+// vkGetSwapchainImagesKHR wrapper
+int32_t vulkan_vkGetSwapchainImagesKHR(int64_t device, int64_t swapchain, int32_t image_count_idx, int32_t images_idx) {
+    VkDevice dev = (VkDevice)(uintptr_t)device;
+    VkSwapchainKHR swap = (VkSwapchainKHR)(uintptr_t)swapchain;
+
+    uint32_t* count_ptr = (uint32_t*)index_to_ptr(image_count_idx);
+    VkImage* images = (VkImage*)index_to_ptr(images_idx);
+
+    printf("DEBUG: vkGetSwapchainImagesKHR called\n");
+    fflush(stdout);
+
+    VkResult result = vkGetSwapchainImagesKHR(dev, swap, count_ptr, images);
+
+    printf("  Swapchain image count: %u\n", *count_ptr);
+    if (images && *count_ptr > 0) {
+        printf("  First image: %p\n", (void*)images[0]);
+    }
+    fflush(stdout);
+
+    return (int32_t)result;
+}
+
+// vkCreateImageView wrapper
+int32_t vulkan_vkCreateImageView(int64_t device, int32_t create_info_idx, int32_t allocator, int32_t image_view_idx) {
+    VkDevice dev = (VkDevice)(uintptr_t)device;
+    VkImageViewCreateInfo* ci = (VkImageViewCreateInfo*)index_to_ptr(create_info_idx);
+    VkImageView* image_view = (VkImageView*)index_to_ptr(image_view_idx);
+
+    printf("DEBUG: vkCreateImageView called\n");
+    printf("  image: %p\n", (void*)ci->image);
+    printf("  viewType: %u\n", ci->viewType);
+    printf("  format: %u\n", ci->format);
+    fflush(stdout);
+
+    VkResult result = vkCreateImageView(dev, ci, NULL, image_view);
+
+    printf("  Image view created: %p, result: %d\n", (void*)*image_view, result);
+    fflush(stdout);
+
+    return (int32_t)result;
+}
+
+// vkDestroyImageView wrapper
+void vulkan_vkDestroyImageView(int64_t device, int64_t image_view, int32_t allocator) {
+    VkDevice dev = (VkDevice)(uintptr_t)device;
+    VkImageView view = (VkImageView)(uintptr_t)image_view;
+
+    printf("DEBUG: vkDestroyImageView called\n");
+    fflush(stdout);
+
+    vkDestroyImageView(dev, view, NULL);
+}
+
+// vkCreateSwapchainKHR wrapper
+int32_t vulkan_vkCreateSwapchainKHR(int64_t device, int32_t create_info_idx, int32_t allocator, int32_t swapchain_idx) {
+    VkDevice dev = (VkDevice)(uintptr_t)device;
+    VkSwapchainCreateInfoKHR* ci = (VkSwapchainCreateInfoKHR*)index_to_ptr(create_info_idx);
+    VkSwapchainKHR* swapchain = (VkSwapchainKHR*)index_to_ptr(swapchain_idx);
+
+    printf("DEBUG: vkCreateSwapchainKHR called\n");
+    printf("  surface: %p\n", (void*)ci->surface);
+    printf("  minImageCount: %u\n", ci->minImageCount);
+    printf("  imageFormat: %u\n", ci->imageFormat);
+    printf("  imageExtent: %ux%u\n", ci->imageExtent.width, ci->imageExtent.height);
+    fflush(stdout);
+
+    VkResult result = vkCreateSwapchainKHR(dev, ci, NULL, swapchain);
+
+    printf("  Swapchain created: %p, result: %d\n", (void*)*swapchain, result);
+    fflush(stdout);
+
+    return (int32_t)result;
+}
+
+// vkDestroySwapchainKHR wrapper
+void vulkan_vkDestroySwapchainKHR(int64_t device, int64_t swapchain, int32_t allocator) {
+    VkDevice dev = (VkDevice)(uintptr_t)device;
+    VkSwapchainKHR swap = (VkSwapchainKHR)(uintptr_t)swapchain;
+
+    printf("DEBUG: vkDestroySwapchainKHR called\n");
+    fflush(stdout);
+
+    vkDestroySwapchainKHR(dev, swap, NULL);
+}
+
+// vkCreateDevice wrapper
+int32_t vulkan_vkCreateDevice(int64_t physical_device, int32_t create_info_idx, int32_t allocator, int32_t device_idx) {
+    VkPhysicalDevice phys_dev = (VkPhysicalDevice)(uintptr_t)physical_device;
+    VkDeviceCreateInfo* create_info = (VkDeviceCreateInfo*)index_to_ptr(create_info_idx);
+    
+    if (!create_info) {
+        fprintf(stderr, "ERROR: Invalid create_info pointer\n");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    VkDevice device;
+    VkResult result = vkCreateDevice(phys_dev, create_info, NULL, &device);
+
+    if (result == VK_SUCCESS && device) {
+        // Store the device handle at the given index
+        int32_t* device_ptr = (int32_t*)index_to_ptr(device_idx);
+        if (device_ptr) {
+            *device_ptr = ptr_to_index((void*)device);
+        }
+    }
+
+    return result;
+}
+
+// vkAcquireNextImageKHR wrapper
+int32_t vulkan_vkAcquireNextImageKHR(int64_t device, int64_t swapchain, int64_t timeout, int64_t semaphore, int64_t fence, int32_t image_index_idx) {
+    VkDevice dev = (VkDevice)(uintptr_t)device;
+    VkSwapchainKHR swap = (VkSwapchainKHR)(uintptr_t)swapchain;
+    VkSemaphore sem = (VkSemaphore)(uintptr_t)semaphore;
+    VkFence fen = (VkFence)(uintptr_t)fence;
+    uint32_t* image_index_ptr = (uint32_t*)index_to_ptr(image_index_idx);
+
+    VkResult result = vkAcquireNextImageKHR(dev, swap, (uint64_t)timeout, sem, fen, image_index_ptr);
+
+    return result;
+}
+
+// vkQueuePresentKHR wrapper
+int32_t vulkan_vkQueuePresentKHR(int64_t queue, int32_t present_info_idx) {
+    VkQueue q = (VkQueue)(uintptr_t)queue;
+    VkPresentInfoKHR* present_info = (VkPresentInfoKHR*)index_to_ptr(present_info_idx);
+
+    VkResult result = vkQueuePresentKHR(q, present_info);
+
+    return result;
+}
+
+// vkDeviceWaitIdle wrapper
+int32_t vulkan_vkDeviceWaitIdle(int64_t device) {
+    VkDevice dev = (VkDevice)(uintptr_t)device;
+    VkResult result = vkDeviceWaitIdle(dev);
+    return result;
+}
+
