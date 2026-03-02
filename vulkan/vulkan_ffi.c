@@ -20,7 +20,7 @@ static int32_t ptr_count = 0;
 static int32_t ptr_to_index(void* ptr) {
     if (!ptr) return -1;
     if (ptr_count >= MAX_PTRS) {
-        fprintf(stderr, "ERROR: Pointer table full!\n");
+        fprintf(stderr, "ERROR: Pointer table full! ptr_count=%d, MAX_PTRS=%d\n", ptr_count, MAX_PTRS);
         return -1;
     }
     ptr_table[ptr_count] = ptr;
@@ -36,7 +36,10 @@ static void* index_to_ptr(int32_t idx) {
 // Allocate memory for structures
 int32_t vulkan_alloc_struct(int32_t size) {
     void* ptr = calloc(1, (size_t)size);  // Use calloc to zero-initialize
-    return ptr_to_index(ptr);
+    int32_t idx = ptr_to_index(ptr);
+    printf("DEBUG: alloc_struct size=%d, ptr=%p, idx=%d\n", size, ptr, idx);
+    fflush(stdout);
+    return idx;
 }
 
 // Free structure memory
@@ -212,11 +215,20 @@ int32_t vulkan_vkEnumeratePhysicalDevices(int64_t instance, int32_t count_idx, i
     return (int32_t)result;
 }
 
+// vkGetPhysicalDeviceProperties wrapper
+void vulkan_vkGetPhysicalDeviceProperties(int64_t physical_device, int32_t properties_idx) {
+    VkPhysicalDevice device = (VkPhysicalDevice)(uintptr_t)physical_device;
+    VkPhysicalDeviceProperties* props = (VkPhysicalDeviceProperties*)index_to_ptr(properties_idx);
+    vkGetPhysicalDeviceProperties(device, props);
+}
+
 // vkGetPhysicalDeviceQueueFamilyProperties wrapper - accepts index of buffer containing device handle
 void vulkan_vkGetPhysicalDeviceQueueFamilyProperties(int64_t device, int32_t count_idx, int32_t props_idx) {
     VkPhysicalDevice device_ptr = (VkPhysicalDevice)(uintptr_t)device;
     uint32_t* count_ptr = index_to_ptr(count_idx);
-    VkQueueFamilyProperties* props_ptr = index_to_ptr(props_idx);
+    // If props_idx is 0, treat it as NULL for first call to get count only
+    VkQueueFamilyProperties* props_ptr = (props_idx == 0) ? NULL : index_to_ptr(props_idx);
+    
     vkGetPhysicalDeviceQueueFamilyProperties(device_ptr, count_ptr, props_ptr);
 }
 
@@ -742,5 +754,69 @@ int32_t vulkan_vkDeviceWaitIdle(int64_t device) {
     VkDevice dev = (VkDevice)(uintptr_t)device;
     VkResult result = vkDeviceWaitIdle(dev);
     return result;
+}
+
+// Get physical device name from properties
+// Returns index of a string that contains the device name
+int32_t vulkan_get_device_name(int32_t properties_idx) {
+    VkPhysicalDeviceProperties* props = (VkPhysicalDeviceProperties*)index_to_ptr(properties_idx);
+    
+    if (!props) {
+        return -1;
+    }
+    
+    // Copy device name to a new string
+    int32_t name_idx = ptr_to_index(malloc(256));
+    char* name_ptr = (char*)index_to_ptr(name_idx);
+    strncpy(name_ptr, props->deviceName, 255);
+    name_ptr[255] = '\0';
+    
+    return name_idx;
+}
+
+// Read a single character from a string at the given offset
+int32_t vulkan_read_char(int32_t str_idx, int32_t offset) {
+    char* str = (char*)index_to_ptr(str_idx);
+    
+    if (!str || offset < 0 || offset >= 256) {
+        return 0;
+    }
+    
+    return (int32_t)str[offset];
+}
+
+// Print device name for debugging
+void vulkan_print_device_name(int32_t properties_idx) {
+    VkPhysicalDeviceProperties* props = (VkPhysicalDeviceProperties*)index_to_ptr(properties_idx);
+    
+    if (!props) {
+        printf("ERROR: Invalid properties pointer\n");
+        fflush(stdout);
+        return;
+    }
+    
+    printf("  Device Name: %s\n", props->deviceName);
+    printf("  Device Type: %d\n", props->deviceType);
+    fflush(stdout);
+}
+
+// Read C string and return to MoonBit
+// Returns the length of the string
+int32_t vulkan_read_c_string(int32_t str_idx, int32_t buffer_idx, int32_t buffer_size) {
+    char* src = (char*)index_to_ptr(str_idx);
+    char* dst = (char*)index_to_ptr(buffer_idx);
+    
+    if (!src || !dst || buffer_size <= 0) {
+        return 0;
+    }
+    
+    int32_t len = 0;
+    while (len < buffer_size - 1 && src[len] != '\0') {
+        dst[len] = src[len];
+        len++;
+    }
+    dst[len] = '\0';
+    
+    return len;
 }
 

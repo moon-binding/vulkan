@@ -200,6 +200,9 @@ pub extern "C" fn vulkan_set_float(ptr : Int, offset : Int, value : Float) -> Un
 // Utility function to create string for Vulkan
 pub extern "C" fn vulkan_create_string(s : String) -> Int = "vulkan_create_string"
 pub extern "C" fn vulkan_free_string(ptr : Int) -> Unit = "vulkan_free_string"
+pub extern "C" fn vulkan_get_device_name(properties_idx : Int) -> Int = "vulkan_get_device_name"
+pub extern "C" fn vulkan_read_char(str_idx : Int, offset : Int) -> Int = "vulkan_read_char"
+pub extern "C" fn vulkan_print_device_name(properties_idx : Int) -> Unit = "vulkan_print_device_name"
 
 // Helper to allocate surface capabilities structure
 pub fn alloc_surface_capabilities() -> Int {
@@ -246,6 +249,80 @@ pub fn alloc_surface_format() -> Int {
   let size = 32 // sizeof(VkSurfaceFormatKHR) = 4 * 8 bytes
   let ptr = vulkan_alloc_struct(size)
   ptr
+}
+
+// Helper to allocate physical device properties structure
+pub fn alloc_physical_device_properties() -> Int {
+  let size = 1000 // sizeof(VkPhysicalDeviceProperties) - increased to be safe
+  let ptr = vulkan_alloc_struct(size)
+  ptr
+}
+
+// Helper to get physical device name
+// VkPhysicalDeviceProperties structure:
+// - bytes 0-3: apiVersion
+// - bytes 4-7: driverVersion
+// - bytes 8-11: vendorID
+// - bytes 12-15: deviceID
+// - bytes 16-19: deviceType
+// - bytes 20-275: deviceName (256 bytes, char array)
+// - bytes 276-283: pipelineCacheUUID
+pub fn get_physical_device_name(properties_idx : Int) -> String {
+  // Call C function to get device name index
+  let name_idx = vulkan_get_device_name(properties_idx)
+  
+  if name_idx == -1 {
+    "Unknown Device"
+  } else {
+    // Read characters one by one
+    let mut result = ""
+    let mut i = 0
+    while i < 64 {  // Limit to 64 characters
+      let char_val = vulkan_read_char(name_idx, i)
+      
+      // Check if we've reached the end of the string
+      if char_val == 0 {
+        break
+      }
+      
+      // Add character if it's printable ASCII
+      if char_val >= 32 && char_val < 127 {
+        let char_code = char_val.to_char()
+        result = result + char_code.to_string()
+      }
+      
+      i = i + 1
+    }
+    
+    if result == "" {
+      "Unknown Device"
+    } else {
+      result
+    }
+  }
+}
+
+// Helper to get physical device type
+// bytes 16-19: deviceType
+pub fn get_physical_device_type(properties : Int) -> Int {
+  get_int32(properties, 16)
+}
+
+// Device type constants
+pub fn is_discrete_gpu(device_type : Int) -> Bool {
+  device_type == 1  // VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+}
+
+pub fn is_integrated_gpu(device_type : Int) -> Bool {
+  device_type == 0  // VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
+}
+
+pub fn is_virtual_gpu(device_type : Int) -> Bool {
+  device_type == 2  // VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU
+}
+
+pub fn is_cpu_device(device_type : Int) -> Bool {
+  device_type == 3  // VK_PHYSICAL_DEVICE_TYPE_CPU
 }
 
 // Helper to read surface format

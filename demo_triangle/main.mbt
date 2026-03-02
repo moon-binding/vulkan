@@ -105,27 +105,97 @@ fn main() -> Unit {
   println("Found device count:")
   println(device_count.to_string())
 
-  // Step 4: Select first physical device and create logical device
+  // Step 4: Enumerate and select physical device
   let physical_devices_ptr = @moonbit/vulkan.vulkan_alloc_struct(device_count * 8)
   @moonbit/vulkan.vkEnumeratePhysicalDevices(instance, device_count_ptr, physical_devices_ptr) |> ignore
 
-  // Try second device (index 1) instead of first - first device (RTX 4080) has driver issues
-  let physical_device = @moonbit/vulkan.get_int64(physical_devices_ptr, if device_count > 1 { 8 } else { 0 })
-  println("Selected physical device:")
-  println(physical_device.to_string())
+  // Query properties for each device and select the best one
+  // Priority: Discrete GPU > Integrated GPU > Virtual GPU > CPU
+  let mut selected_device_index = 0
+  let mut selected_device_score = -1
+  let mut i = 0
 
-  // Get queue family properties using array version
+  while i < device_count {
+    let device_offset = i * 8
+    let physical_device = @moonbit/vulkan.get_int64(physical_devices_ptr, device_offset)
+    
+    println("")
+    println("Device " + i.to_string() + ":")
+    
+    // Get device properties
+    let device_props = @moonbit/vulkan.alloc_physical_device_properties()
+    @moonbit/vulkan.vkGetPhysicalDeviceProperties(physical_device, device_props)
+    
+    let device_type = @moonbit/vulkan.get_physical_device_type(device_props)
+    
+    // Print device name using C function (for debugging)
+    // Temporarily disable to avoid crash
+    // @moonbit/vulkan.vulkan_print_device_name(device_props)
+    println("  Device Name: <printing disabled>")
+    
+    let mut device_type_str = "Unknown"
+    if device_type == 1 {
+      device_type_str = "Discrete GPU"
+    } else if device_type == 0 {
+      device_type_str = "Integrated GPU"
+    } else if device_type == 2 {
+      device_type_str = "Virtual GPU"
+    } else if device_type == 3 {
+      device_type_str = "CPU (lavapipe)"
+    } else if device_type == 4 {
+      device_type_str = "CPU (llvmpipe)"
+    }
+    
+    println("  Type: " + device_type_str)
+    
+    // Calculate device score
+    let mut device_score = 0
+    
+    if @moonbit/vulkan.is_discrete_gpu(device_type) {
+      device_score = 1000  // Highest priority
+    } else if @moonbit/vulkan.is_integrated_gpu(device_type) {
+      device_score = 800   // Second priority
+    } else if device_type == 2 {
+      device_score = 400   // Virtual GPU (should be GPU but reported as virtual)
+    } else if device_type == 4 {
+      device_score = 50    // llvmpipe (software renderer)
+    } else if @moonbit/vulkan.is_cpu_device(device_type) {
+      device_score = 100   // CPU (lavapipe)
+    } else {
+      device_score = 0
+    }
+    
+    println("  Device score: " + device_score.to_string())
+    
+    // Check if this device has better score
+    if device_score > selected_device_score {
+      selected_device_score = device_score
+      selected_device_index = i
+      println("  -> Selected as best device")
+    }
+    
+    i = i + 1
+  }
+
+  let physical_device = @moonbit/vulkan.get_int64(physical_devices_ptr, selected_device_index * 8)
+  println("")
+  println("Selected physical device index: " + selected_device_index.to_string())
+  println("Selected device score: " + selected_device_score.to_string())
+
+  // Get queue family properties for the selected device
   let queue_family_count_ptr = @moonbit/vulkan.vulkan_alloc_struct(8)
   // First call to get count
-  @moonbit/vulkan.vkGetPhysicalDeviceQueueFamilyPropertiesArray(physical_devices_ptr, 1, queue_family_count_ptr, 0)
+  @moonbit/vulkan.vkGetPhysicalDeviceQueueFamilyProperties(physical_device, queue_family_count_ptr, 0)
 
   let queue_family_count = @moonbit/vulkan.get_int32(queue_family_count_ptr, 0)
   println("Queue family count:")
   println(queue_family_count.to_string())
+  println("Physical device: " + physical_device.to_string())
 
-  let queue_family_properties_ptr = @moonbit/vulkan.vulkan_alloc_struct(queue_family_count * 40) // approximate size
+  // VkQueueFamilyProperties is 32 bytes (4 * 8), not 40
+  let queue_family_properties_ptr = @moonbit/vulkan.vulkan_alloc_struct(queue_family_count * 32)
 
-  @moonbit/vulkan.vkGetPhysicalDeviceQueueFamilyPropertiesArray(physical_devices_ptr, 1, queue_family_count_ptr, queue_family_properties_ptr)
+  @moonbit/vulkan.vkGetPhysicalDeviceQueueFamilyProperties(physical_device, queue_family_count_ptr, queue_family_properties_ptr)
 
   // Find a queue family that supports graphics
   let mut graphics_queue_family = -1
@@ -133,7 +203,7 @@ fn main() -> Unit {
 
   let mut i = 0
   while i < queue_family_count {
-    let offset = i * 40
+    let offset = i * 32
     let queue_flags = @moonbit/vulkan.get_int32(queue_family_properties_ptr, offset)
 
     if (queue_flags & 1) != 0 && graphics_queue_family < 0 {
@@ -142,7 +212,7 @@ fn main() -> Unit {
 
     // Check presentation support
     let present_support_ptr = @moonbit/vulkan.vulkan_alloc_struct(4)
-    @moonbit/vulkan.vkGetPhysicalDeviceSurfaceSupportKHRArray(physical_devices_ptr, 1, i, surface, present_support_ptr) |> ignore
+    @moonbit/vulkan.vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, present_support_ptr) |> ignore
     let present_support = @moonbit/vulkan.get_int32(present_support_ptr, 0)
 
     if present_support != 0 && present_queue_family < 0 {
