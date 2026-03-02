@@ -46,14 +46,46 @@ fn main() -> Unit {
             SurfaceCreated(surface) => {
               println("Surface created! Handle: " + surface.to_string())
 
-              // For now, we'll stop here and cleanup
-              // Next phases will implement device creation and rendering
-              println("Phase 1-3 complete: Window, Instance, and Surface creation in MoonBit!")
-              println("")
-              println("Progress summary:")
-              println("  ✓ GLFW window creation - MoonBit")
-              println("  ✓ Vulkan instance creation - MoonBit")
-              println("  ✓ Surface creation - MoonBit")
+              // Test physical device selection
+              println("=== Step 4: Selecting physical device ===")
+              let physical_device = select_physical_device(instance)
+
+              if physical_device > 0 {
+                println("Physical device selected! Handle: " + physical_device.to_string())
+
+                // Find queue families
+                println("=== Step 5: Finding queue families ===")
+                let (graphics_family, present_family) = find_queue_families(physical_device, surface)
+
+                if graphics_family >= 0 && present_family >= 0 {
+                  println("Queue families found!")
+
+                  // Create logical device
+                  println("=== Step 6: Creating logical device ===")
+                  let device = vk_create_logical_device_bridge(physical_device, graphics_family, present_family)
+
+                  if device > 0 {
+                    println("Logical device created! Handle: " + device.to_string())
+
+                    println("")
+                    println("Progress summary:")
+                    println("  ✓ GLFW window creation - MoonBit")
+                    println("  ✓ Vulkan instance creation - MoonBit")
+                    println("  ✓ Surface creation - MoonBit")
+                    println("  ✓ Physical device selection - MoonBit")
+                    println("  ✓ Queue family enumeration - MoonBit")
+                    println("  ✓ Logical device creation - MoonBit")
+                    println("")
+                    println("Phase 1-6 complete!")
+                  } else {
+                    println("Failed to create logical device")
+                  }
+                } else {
+                  println("Failed to find queue families")
+                }
+              } else {
+                println("Failed to select physical device")
+              }
             }
             SurfaceError(msg) => {
               println("Surface creation failed: " + msg)

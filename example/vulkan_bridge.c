@@ -310,33 +310,119 @@ int moonbit_vk_create_logical_device() {
     uint32_t presentFamily;
     uint32_t graphicsFamily = find_queue_families(g_ctx->physicalDevice, &presentFamily);
     g_ctx->graphicsQueueFamily = graphicsFamily;
-    
+
     float queuePriority = 1.0f;
     VkDeviceQueueCreateInfo queueCreateInfo = {0};
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueCreateInfo.queueFamilyIndex = graphicsFamily;
     queueCreateInfo.queueCount = 1;
     queueCreateInfo.pQueuePriorities = &queuePriority;
-    
+
     const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-    
+
     VkDeviceCreateInfo createInfo = {0};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = &queueCreateInfo;
     createInfo.queueCreateInfoCount = 1;
     createInfo.enabledExtensionCount = 1;
     createInfo.ppEnabledExtensionNames = deviceExtensions;
-    
+
     VkResult result = vkCreateDevice(g_ctx->physicalDevice, &createInfo, NULL, &g_ctx->device);
     if (!check_vk_result(result, "Failed to create logical device")) {
         return 0;
     }
-    
+
     vkGetDeviceQueue(g_ctx->device, graphicsFamily, 0, &g_ctx->graphicsQueue);
     vkGetDeviceQueue(g_ctx->device, presentFamily, 0, &g_ctx->presentQueue);
-    
+
     printf("Logical device created\n");
     return 1;
+}
+
+// Bridge function for MoonBit logical device creation
+int64_t moonbit_vk_create_logical_device_bridge(int64_t physicalDevice, uint32_t graphicsFamily, uint32_t presentFamily) {
+    printf("Creating logical device (bridge)\n");
+    printf("  Physical device: %p\n", (void*)physicalDevice);
+    printf("  Graphics family: %u\n", graphicsFamily);
+    printf("  Present family: %u\n", presentFamily);
+
+    float queuePriority = 1.0f;
+    VkDeviceQueueCreateInfo queueCreateInfo = {0};
+    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueCreateInfo.queueFamilyIndex = graphicsFamily;
+    queueCreateInfo.queueCount = 1;
+    queueCreateInfo.pQueuePriorities = &queuePriority;
+
+    const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    printf("  Enabling extension: %s\n", VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+    VkDeviceCreateInfo createInfo = {0};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.pQueueCreateInfos = &queueCreateInfo;
+    createInfo.queueCreateInfoCount = 1;
+    createInfo.enabledExtensionCount = 1;
+    createInfo.ppEnabledExtensionNames = deviceExtensions;
+
+    VkDevice device = VK_NULL_HANDLE;
+    VkResult result = vkCreateDevice((VkPhysicalDevice)physicalDevice, &createInfo, NULL, &device);
+    if (!check_vk_result(result, "Failed to create logical device (bridge)")) {
+        return 0;
+    }
+
+    printf("Logical device created (bridge)\n");
+    return (int64_t)device;
+}
+
+// Bridge function to find queue families
+int64_t moonbit_vk_find_queue_families_bridge(int64_t physicalDevice, int64_t surface) {
+    printf("Finding queue families (bridge)\n");
+    printf("  Physical device: %p\n", (void*)physicalDevice);
+    printf("  Surface: %p\n", (void*)surface);
+
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties((VkPhysicalDevice)physicalDevice, &queueFamilyCount, NULL);
+
+    printf("  Queue family count: %u\n", queueFamilyCount);
+
+    VkQueueFamilyProperties* queueFamilies = malloc(queueFamilyCount * sizeof(VkQueueFamilyProperties));
+    vkGetPhysicalDeviceQueueFamilyProperties((VkPhysicalDevice)physicalDevice, &queueFamilyCount, queueFamilies);
+
+    uint32_t graphicsFamily = UINT32_MAX;
+    uint32_t presentFamily = UINT32_MAX;
+
+    for (uint32_t i = 0; i < queueFamilyCount; i++) {
+        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            graphicsFamily = i;
+        }
+
+        VkBool32 presentSupport = VK_FALSE;
+        vkGetPhysicalDeviceSurfaceSupportKHR((VkPhysicalDevice)physicalDevice, i, (VkSurfaceKHR)surface, &presentSupport);
+        if (presentSupport) {
+            presentFamily = i;
+        }
+
+        if (graphicsFamily != UINT32_MAX && presentFamily != UINT32_MAX) {
+            break;
+        }
+    }
+
+    free(queueFamilies);
+
+    if (graphicsFamily == UINT32_MAX) {
+        fprintf(stderr, "No graphics queue family found\n");
+        return 0;
+    }
+
+    if (presentFamily == UINT32_MAX) {
+        fprintf(stderr, "No present queue family found\n");
+        return 0;
+    }
+
+    printf("  Graphics family: %u\n", graphicsFamily);
+    printf("  Present family: %u\n", presentFamily);
+
+    // Pack both values into 64-bit: lower 32 bits = graphics, upper 32 bits = present
+    return ((int64_t)presentFamily << 32) | graphicsFamily;
 }
 
 // ============== Swapchain ==============

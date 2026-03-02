@@ -20,6 +20,10 @@ extern "C" fn vulkan_read_char(str_idx : Int, offset : Int) -> Int = "vulkan_rea
 extern "C" fn vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice : Int64, pQueueFamilyPropertyCount : Int, pQueueFamilyProperties : Int) -> Unit = "vulkan_vkGetPhysicalDeviceQueueFamilyProperties"
 extern "C" fn vkGetDeviceQueue(device : Int64, queueFamilyIndex : Int, queueIndex : Int, pQueue : Int) -> Unit = "vulkan_vkGetDeviceQueue"
 
+// Bridge functions for device creation
+extern "C" fn vk_find_queue_families_bridge(physicalDevice : Int64, surface : Int64) -> Int64 = "moonbit_vk_find_queue_families_bridge"
+extern "C" fn vk_create_logical_device_bridge(physicalDevice : Int64, graphicsFamily : Int, presentFamily : Int) -> Int64 = "moonbit_vk_create_logical_device_bridge"
+
 // Additional Vulkan constants (device-specific)
 pub const VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO : Int = 5
 pub const VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO : Int = 6
@@ -92,11 +96,11 @@ pub fn select_physical_device(instance : Int64) -> Int64 {
   // For simplicity, just select the first device
   let physical_device = vulkan_get_int64(devices_buffer, 0)
 
-  // Get and print device name
-  let properties_buffer = vulkan_alloc_struct(512)  // VkPhysicalDeviceProperties size
-  vkGetPhysicalDeviceProperties(physical_device, properties_buffer)
-  let device_name = get_device_name_from_properties(properties_buffer)
-  println("Selected physical device: " + device_name)
+  // Get and print device name (commented out to avoid crash)
+  // let properties_buffer = vulkan_alloc_struct(512)  // VkPhysicalDeviceProperties size
+  // vkGetPhysicalDeviceProperties(physical_device, properties_buffer)
+  // let device_name = get_device_name_from_properties(properties_buffer)
+  println("Selected physical device: (name retrieval disabled)")
 
   physical_device
 }
@@ -143,6 +147,25 @@ pub fn find_graphics_queue_family(physical_device : Int64) -> Int {
 
   println("No graphics queue family found!")
   return -1
+}
+
+// Find queue families that support graphics and presentation
+// Uses C bridge to check surface support
+pub fn find_queue_families(physical_device : Int64, surface : Int64) -> (Int, Int) {
+  println("Finding queue families (graphics and present)...")
+
+  // Use C bridge to find queue families
+  let result = vk_find_queue_families_bridge(physical_device, surface)
+
+  // Parse result: graphics_family in lower 32 bits, present_family in upper 32 bits
+  // Need to use to_int() to convert to Int
+  let graphics_family = (result & 0xFFFFFFFF).to_int()
+  let present_family = ((result >> 32) & 0xFFFFFFFF).to_int()
+
+  println("Graphics queue family: " + graphics_family.to_string())
+  println("Present queue family: " + present_family.to_string())
+
+  (graphics_family, present_family)
 }
 
 // Create a logical device
