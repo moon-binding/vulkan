@@ -1102,8 +1102,315 @@ void moonbit_vk_draw_frame() {
     presentInfo.pImageIndices = &imageIndex;
     
     vkQueuePresentKHR(g_ctx->presentQueue, &presentInfo);
-    
+
     g_ctx->currentFrame = (g_ctx->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+// ============== MoonBit Bridge Functions for Phases 10-13 ==============
+
+// Bridge function for graphics pipeline creation
+int64_t moonbit_vk_create_graphics_pipeline_bridge(int64_t device, int64_t renderPass, int extentWidth, int extentHeight) {
+    printf("Creating graphics pipeline (bridge)\n");
+    printf("  Device: %p, RenderPass: %p\n", (void*)device, (void*)renderPass);
+
+    // Load shaders (embedded in shaders_spv.h)
+    VkShaderModule vertModule;
+    VkShaderModule fragModule;
+
+    VkShaderModuleCreateInfo vertInfo = {0};
+    vertInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vertInfo.codeSize = vert_shader_size;
+    vertInfo.pCode = vert_shader_spv;
+    if (vkCreateShaderModule((VkDevice)device, &vertInfo, NULL, &vertModule) != VK_SUCCESS) {
+        return 0;
+    }
+
+    VkShaderModuleCreateInfo fragInfo = {0};
+    fragInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    fragInfo.codeSize = frag_shader_size;
+    fragInfo.pCode = frag_shader_spv;
+    if (vkCreateShaderModule((VkDevice)device, &fragInfo, NULL, &fragModule) != VK_SUCCESS) {
+        vkDestroyShaderModule((VkDevice)device, vertModule, NULL);
+        return 0;
+    }
+
+    VkPipelineShaderStageCreateInfo vertStageInfo = {0};
+    vertStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertStageInfo.module = vertModule;
+    vertStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo fragStageInfo = {0};
+    fragStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragStageInfo.module = fragModule;
+    fragStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = { vertStageInfo, fragStageInfo };
+
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {0};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly = {0};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    VkViewport viewport = {0};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float)extentWidth;
+    viewport.height = (float)extentHeight;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor = {0};
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    scissor.extent.width = extentWidth;
+    scissor.extent.height = extentHeight;
+
+    VkPipelineViewportStateCreateInfo viewportState = {0};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.viewportCount = 1;
+    viewportState.pViewports = &viewport;
+    viewportState.scissorCount = 1;
+    viewportState.pScissors = &scissor;
+
+    VkPipelineRasterizationStateCreateInfo rasterizer = {0};
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+
+    VkPipelineMultisampleStateCreateInfo multisampling = {0};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineColorBlendAttachmentState colorBlendAttachment = {0};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                           VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+    VkPipelineColorBlendStateCreateInfo colorBlending = {0};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachment;
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {0};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    VkPipelineLayout pipelineLayout;
+    if (vkCreatePipelineLayout((VkDevice)device, &pipelineLayoutInfo, NULL, &pipelineLayout) != VK_SUCCESS) {
+        vkDestroyShaderModule((VkDevice)device, fragModule, NULL);
+        vkDestroyShaderModule((VkDevice)device, vertModule, NULL);
+        return 0;
+    }
+
+    VkGraphicsPipelineCreateInfo pipelineInfo = {0};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.renderPass = (VkRenderPass)renderPass;
+    pipelineInfo.subpass = 0;
+
+    VkPipeline graphicsPipeline;
+    if (vkCreateGraphicsPipelines((VkDevice)device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &graphicsPipeline) != VK_SUCCESS) {
+        vkDestroyPipelineLayout((VkDevice)device, pipelineLayout, NULL);
+        vkDestroyShaderModule((VkDevice)device, fragModule, NULL);
+        vkDestroyShaderModule((VkDevice)device, vertModule, NULL);
+        return 0;
+    }
+
+    vkDestroyShaderModule((VkDevice)device, fragModule, NULL);
+    vkDestroyShaderModule((VkDevice)device, vertModule, NULL);
+
+    printf("Graphics pipeline created (bridge)\n");
+
+    // Pack pipeline and pipelineLayout into result
+    return ((int64_t)pipelineLayout << 48) | (int64_t)graphicsPipeline;
+}
+
+// Bridge function to destroy graphics pipeline
+int moonbit_vk_destroy_graphics_pipeline_bridge(int64_t device, int64_t pipeline, int64_t pipelineLayout) {
+    printf("Destroying graphics pipeline (bridge)\n");
+    vkDestroyPipeline((VkDevice)device, (VkPipeline)pipeline, NULL);
+    vkDestroyPipelineLayout((VkDevice)device, (VkPipelineLayout)pipelineLayout, NULL);
+    printf("Graphics pipeline destroyed (bridge)\n");
+    return 1;
+}
+
+// Bridge function for framebuffers creation
+int64_t moonbit_vk_create_framebuffers_bridge(int64_t device, int64_t renderPass, int64_t imageViews, int imageCount, int width, int height) {
+    printf("Creating framebuffers (bridge)\n");
+    printf("  Image count: %d, Size: %dx%d\n", imageCount, width, height);
+
+    VkImageView* views = (VkImageView*)imageViews;
+    VkFramebuffer* framebuffers = malloc(imageCount * sizeof(VkFramebuffer));
+
+    for (int i = 0; i < imageCount; i++) {
+        VkFramebufferCreateInfo framebufferInfo = {0};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = (VkRenderPass)renderPass;
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = &views[i];
+        framebufferInfo.width = width;
+        framebufferInfo.height = height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer((VkDevice)device, &framebufferInfo, NULL, &framebuffers[i]) != VK_SUCCESS) {
+            free(framebuffers);
+            return 0;
+        }
+    }
+
+    printf("Framebuffers created (bridge)\n");
+    return (int64_t)framebuffers;
+}
+
+// Bridge function to destroy framebuffers
+int moonbit_vk_destroy_framebuffers_bridge(int64_t device, int64_t framebuffers, int imageCount) {
+    printf("Destroying framebuffers (bridge)\n");
+
+    VkFramebuffer* fbs = (VkFramebuffer*)framebuffers;
+    for (int i = 0; i < imageCount; i++) {
+        vkDestroyFramebuffer((VkDevice)device, fbs[i], NULL);
+    }
+
+    free(fbs);
+    printf("Framebuffers destroyed (bridge)\n");
+    return 1;
+}
+
+// Bridge function for command pool creation
+int64_t moonbit_vk_create_command_pool_bridge(int64_t device, int queueFamily) {
+    printf("Creating command pool (bridge)\n");
+    printf("  Queue family: %d\n", queueFamily);
+
+    VkCommandPoolCreateInfo poolInfo = {0};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = queueFamily;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    VkCommandPool commandPool;
+    if (vkCreateCommandPool((VkDevice)device, &poolInfo, NULL, &commandPool) != VK_SUCCESS) {
+        return 0;
+    }
+
+    printf("Command pool created (bridge)\n");
+    return (int64_t)commandPool;
+}
+
+// Bridge function for command buffers creation
+int64_t moonbit_vk_create_command_buffers_bridge(int64_t device, int64_t commandPool, int imageCount) {
+    printf("Creating command buffers (bridge)\n");
+    printf("  Image count: %d\n", imageCount);
+
+    VkCommandBufferAllocateInfo allocInfo = {0};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = (VkCommandPool)commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = imageCount;
+
+    VkCommandBuffer* commandBuffers = malloc(imageCount * sizeof(VkCommandBuffer));
+    if (vkAllocateCommandBuffers((VkDevice)device, &allocInfo, commandBuffers) != VK_SUCCESS) {
+        free(commandBuffers);
+        return 0;
+    }
+
+    printf("Command buffers created (bridge)\n");
+    return (int64_t)commandBuffers;
+}
+
+// Bridge function to destroy command pool
+int moonbit_vk_destroy_command_pool_bridge(int64_t device, int64_t commandPool, int64_t commandBuffers) {
+    printf("Destroying command pool (bridge)\n");
+    free((void*)commandBuffers);
+    vkDestroyCommandPool((VkDevice)device, (VkCommandPool)commandPool, NULL);
+    printf("Command pool destroyed (bridge)\n");
+    return 1;
+}
+
+// Bridge function for sync objects creation
+int64_t moonbit_vk_create_sync_objects_bridge(int64_t device) {
+    printf("Creating sync objects (bridge)\n");
+
+    // Allocate sync objects structure
+    typedef struct {
+        VkSemaphore* imageAvailableSemaphores;
+        VkSemaphore* renderFinishedSemaphores;
+        VkFence* inFlightFences;
+        int currentFrame;
+    } SyncObjects;
+
+    SyncObjects* sync = malloc(sizeof(SyncObjects));
+    sync->currentFrame = 0;
+
+    VkSemaphoreCreateInfo semaphoreInfo = {0};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo = {0};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    sync->imageAvailableSemaphores = malloc(MAX_FRAMES_IN_FLIGHT * sizeof(VkSemaphore));
+    sync->renderFinishedSemaphores = malloc(MAX_FRAMES_IN_FLIGHT * sizeof(VkSemaphore));
+    sync->inFlightFences = malloc(MAX_FRAMES_IN_FLIGHT * sizeof(VkFence));
+
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (vkCreateSemaphore((VkDevice)device, &semaphoreInfo, NULL, &sync->imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore((VkDevice)device, &semaphoreInfo, NULL, &sync->renderFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence((VkDevice)device, &fenceInfo, NULL, &sync->inFlightFences[i]) != VK_SUCCESS) {
+            // Cleanup on failure
+            for (int j = 0; j < i; j++) {
+                vkDestroySemaphore((VkDevice)device, sync->imageAvailableSemaphores[j], NULL);
+                vkDestroySemaphore((VkDevice)device, sync->renderFinishedSemaphores[j], NULL);
+                vkDestroyFence((VkDevice)device, sync->inFlightFences[j], NULL);
+            }
+            free(sync->imageAvailableSemaphores);
+            free(sync->renderFinishedSemaphores);
+            free(sync->inFlightFences);
+            free(sync);
+            return 0;
+        }
+    }
+
+    printf("Sync objects created (bridge)\n");
+    return (int64_t)sync;
+}
+
+// Bridge function to destroy sync objects
+int moonbit_vk_destroy_sync_objects_bridge(int64_t device, int64_t syncObjects) {
+    printf("Destroying sync objects (bridge)\n");
+
+    typedef struct {
+        VkSemaphore* imageAvailableSemaphores;
+        VkSemaphore* renderFinishedSemaphores;
+        VkFence* inFlightFences;
+        int currentFrame;
+    } SyncObjects;
+
+    SyncObjects* sync = (SyncObjects*)syncObjects;
+
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroySemaphore((VkDevice)device, sync->renderFinishedSemaphores[i], NULL);
+        vkDestroySemaphore((VkDevice)device, sync->imageAvailableSemaphores[i], NULL);
+        vkDestroyFence((VkDevice)device, sync->inFlightFences[i], NULL);
+    }
+
+    free(sync->imageAvailableSemaphores);
+    free(sync->renderFinishedSemaphores);
+    free(sync->inFlightFences);
+    free(sync);
+
+    printf("Sync objects destroyed (bridge)\n");
+    return 1;
 }
 
 // ============== Cleanup ==============

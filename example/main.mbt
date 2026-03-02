@@ -85,19 +85,79 @@ fn main() -> Unit {
                               RenderPassCreated(render_pass) => {
                                 println("Render pass created! Handle: " + render_pass.to_string())
 
-                                println("")
-                                println("Progress summary:")
-                                println("  ✓ GLFW window creation - MoonBit")
-                                println("  ✓ Vulkan instance creation - MoonBit")
-                                println("  ✓ Surface creation - MoonBit")
-                                println("  ✓ Physical device selection - MoonBit")
-                                println("  ✓ Queue family enumeration - MoonBit")
-                                println("  ✓ Logical device creation - MoonBit")
-                                println("  ✓ Swapchain creation - MoonBit")
-                                println("  ✓ Image views creation - MoonBit")
-                                println("  ✓ Render pass creation - MoonBit")
-                                println("")
-                                println("Phase 1-9 complete!")
+                                // Create graphics pipeline
+                                println("=== Step 10: Creating graphics pipeline ===")
+                                match create_graphics_pipeline(device, render_pass, width, height) {
+                                  GraphicsPipelineCreated(pipeline, pipeline_layout) => {
+                                    println("Graphics pipeline created! Handle: " + pipeline.to_string())
+
+                                    // Create framebuffers
+                                    println("=== Step 11: Creating framebuffers ===")
+                                    match create_framebuffers(device, render_pass, image_views, image_count, width, height) {
+                                      FramebuffersCreated(framebuffers, _) => {
+                                        println("Framebuffers created!")
+
+                                        // Create command pool and buffers
+                                        println("=== Step 12: Creating command pool and buffers ===")
+                                        match create_command_pool(device, graphics_family, image_count) {
+                                          CommandPoolCreated(command_pool, command_buffers) => {
+                                            println("Command pool created!")
+
+                                            // Create sync objects
+                                            println("=== Step 13: Creating sync objects ===")
+                                            match create_sync_objects(device) {
+                                              SyncObjectsCreated(sync_objects) => {
+                                                println("Sync objects created!")
+
+                                                println("")
+                                                println("Progress summary:")
+                                                println("  ✓ GLFW window creation - MoonBit")
+                                                println("  ✓ Vulkan instance creation - MoonBit")
+                                                println("  ✓ Surface creation - MoonBit")
+                                                println("  ✓ Physical device selection - MoonBit")
+                                                println("  ✓ Queue family enumeration - MoonBit")
+                                                println("  ✓ Logical device creation - MoonBit")
+                                                println("  ✓ Swapchain creation - MoonBit")
+                                                println("  ✓ Image views creation - MoonBit")
+                                                println("  ✓ Render pass creation - MoonBit")
+                                                println("  ✓ Graphics pipeline creation - MoonBit")
+                                                println("  ✓ Framebuffers creation - MoonBit")
+                                                println("  ✓ Command pool/buffers creation - MoonBit")
+                                                println("  ✓ Sync objects creation - MoonBit")
+                                                println("")
+                                                println("Phase 1-13 complete!")
+
+                                                // Cleanup sync objects
+                                                destroy_sync_objects(device, sync_objects)
+                                              }
+                                              SyncObjectsError(msg) => {
+                                                println("Failed to create sync objects: " + msg)
+                                              }
+                                            }
+
+                                            // Cleanup command pool
+                                            destroy_command_pool(device, command_pool, command_buffers)
+                                          }
+                                          CommandPoolError(msg) => {
+                                            println("Failed to create command pool: " + msg)
+                                          }
+                                        }
+
+                                        // Cleanup framebuffers
+                                        destroy_framebuffers(device, framebuffers, image_count)
+                                      }
+                                      FramebuffersError(msg) => {
+                                        println("Failed to create framebuffers: " + msg)
+                                      }
+                                    }
+
+                                    // Cleanup graphics pipeline
+                                    destroy_graphics_pipeline(device, pipeline, pipeline_layout)
+                                  }
+                                  GraphicsPipelineError(msg) => {
+                                    println("Failed to create graphics pipeline: " + msg)
+                                  }
+                                }
 
                                 // Cleanup render pass
                                 destroy_render_pass(device, render_pass)
