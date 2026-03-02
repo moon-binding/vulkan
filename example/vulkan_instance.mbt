@@ -13,6 +13,7 @@ extern "C" fn vkDestroyInstance(instance : Int64, pAllocator : Int) -> Unit = "v
 extern "C" fn vulkan_alloc_struct(size : Int) -> Int = "vulkan_alloc_struct"
 extern "C" fn vulkan_free_struct(ptr : Int) -> Unit = "vulkan_free_struct"
 extern "C" fn vulkan_put_int32(ptr : Int, offset : Int, value : Int) -> Unit = "vulkan_put_int32"
+extern "C" fn vulkan_get_int32(ptr : Int, offset : Int) -> Int = "vulkan_get_int32"
 extern "C" fn vulkan_get_int64(ptr : Int, offset : Int) -> Int64 = "vulkan_get_int64"
 
 // Vulkan constants (from Vulkan SDK)
