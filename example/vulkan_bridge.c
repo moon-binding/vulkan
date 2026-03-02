@@ -93,22 +93,47 @@ int moonbit_vk_init_window(int width, int height, const char* title) {
         fprintf(stderr, "Failed to initialize GLFW\n");
         return 0;
     }
-    
+
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-    
+
     g_ctx = (VulkanContext*)calloc(1, sizeof(VulkanContext));
     g_ctx->window = glfwCreateWindow(width, height, title, NULL, NULL);
-    
+
     if (!g_ctx->window) {
         fprintf(stderr, "Failed to create GLFW window\n");
         glfwTerminate();
         return 0;
     }
-    
+
     g_ctx->framebufferResized = 0;
     printf("Window created: %dx%d - %s\n", width, height, title);
     return 1;
+}
+
+// Bridge function for MoonBit window creation
+int64_t moonbit_vk_init_window_bridge(const char* title, int width, int height) {
+    if (!glfwInit()) {
+        fprintf(stderr, "Failed to initialize GLFW (bridge)\n");
+        return 0;
+    }
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+    // Use default title if null
+    const char* windowTitle = (title && strlen(title) > 0) ? title : "MoonBit Vulkan";
+
+    GLFWwindow* window = glfwCreateWindow(width, height, windowTitle, NULL, NULL);
+
+    if (!window) {
+        fprintf(stderr, "Failed to create GLFW window (bridge)\n");
+        glfwTerminate();
+        return 0;
+    }
+
+    printf("Window created (bridge): %dx%d - %s\n", width, height, windowTitle);
+    return (int64_t)window;
 }
 
 int moonbit_vk_window_should_close() {
@@ -133,24 +158,69 @@ int moonbit_vk_create_instance(const char* appName) {
     appInfo.pEngineName = "MoonBit Vulkan";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_0;
-    
+
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    
+
     VkInstanceCreateInfo createInfo = {0};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
     createInfo.enabledExtensionCount = glfwExtensionCount;
     createInfo.ppEnabledExtensionNames = glfwExtensions;
     createInfo.enabledLayerCount = 0;
-    
+
     VkResult result = vkCreateInstance(&createInfo, NULL, &g_ctx->instance);
     if (!check_vk_result(result, "Failed to create Vulkan instance")) {
         return 0;
     }
-    
+
     printf("Vulkan instance created\n");
     return 1;
+}
+
+// Bridge function for MoonBit instance creation
+int64_t moonbit_vk_create_instance_bridge(const char* appName) {
+    VkApplicationInfo appInfo = {0};
+    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName = appName ? appName : "MoonBit Vulkan App";
+    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.pEngineName = "MoonBit Vulkan";
+    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.apiVersion = VK_API_VERSION_1_0;
+
+    uint32_t glfwExtensionCount = 0;
+    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+    printf("GLFW required extensions: %u\n", glfwExtensionCount);
+    for (uint32_t i = 0; i < glfwExtensionCount; i++) {
+        printf("  %s\n", glfwExtensions[i]);
+    }
+
+    VkInstanceCreateInfo createInfo = {0};
+    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    createInfo.pApplicationInfo = &appInfo;
+    createInfo.enabledExtensionCount = glfwExtensionCount;
+    createInfo.ppEnabledExtensionNames = glfwExtensions;
+    createInfo.enabledLayerCount = 0;
+
+    VkInstance instance;
+    VkResult result = vkCreateInstance(&createInfo, NULL, &instance);
+    if (!check_vk_result(result, "Failed to create Vulkan instance (bridge)")) {
+        return 0;
+    }
+
+    printf("Vulkan instance created (bridge)\n");
+    return (int64_t)instance;
+}
+
+// Bridge function for MoonBit surface creation
+int64_t moonbit_vk_create_surface_bridge(int64_t instance, int64_t window) {
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    VkResult result = glfwCreateWindowSurface((VkInstance)instance, (GLFWwindow*)window, NULL, &surface);
+    if (!check_vk_result(result, "Failed to create window surface (bridge)")) {
+        return 0;
+    }
+    return (int64_t)surface;
 }
 
 // ============== Surface ==============

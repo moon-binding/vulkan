@@ -9,6 +9,9 @@
 extern "C" fn vkCreateInstance(pCreateInfo : Int, pAllocator : Int, pInstance : Int) -> Int = "vulkan_vkCreateInstance"
 extern "C" fn vkDestroyInstance(instance : Int64, pAllocator : Int) -> Unit = "vulkan_vkDestroyInstance"
 
+// Bridge function for instance creation with proper extension support
+extern "C" fn vk_create_instance_bridge(appName : Int) -> Int64 = "moonbit_vk_create_instance_bridge"
+
 // Memory helper functions (from vulkan_ffi.c)
 extern "C" fn vulkan_alloc_struct(size : Int) -> Int = "vulkan_alloc_struct"
 extern "C" fn vulkan_free_struct(ptr : Int) -> Unit = "vulkan_free_struct"
@@ -68,32 +71,17 @@ fn alloc_instance_create_info() -> Int {
   ptr
 }
 
-// Create Vulkan instance using MoonBit
+// Create Vulkan instance using C bridge (for proper extension support)
 pub fn create_vulkan_instance() -> InstanceResult {
-  println("Creating Vulkan instance with MoonBit...")
+  println("Creating Vulkan instance with MoonBit (using C bridge for extensions)...")
 
-  // Allocate application info structure
-  let app_info = alloc_application_info()
+  // Use C bridge which properly handles GLFW extensions
+  // Pass 0 for title - C bridge will use a default title
+  let instance = vk_create_instance_bridge(0)
 
-  // Allocate instance create info structure
-  let create_info = alloc_instance_create_info()
-
-  // Link application info to create info (at offset 24)
-  vulkan_put_int32(create_info, 24, app_info)
-
-  // Allocate buffer to receive instance handle
-  let instance_buffer = vulkan_alloc_struct(8)
-
-  // Call Vulkan API to create instance
-  let result = vkCreateInstance(create_info, 0, instance_buffer)
-
-  // Check result
-  if result != VK_SUCCESS {
-    return InstanceError("Failed to create Vulkan instance, error code: " + result.to_string())
+  if instance == 0 {
+    return InstanceError("Failed to create Vulkan instance")
   }
-
-  // Read instance handle from buffer
-  let instance = vulkan_get_int64(instance_buffer, 0)
 
   println("Vulkan instance created successfully!")
   println("Instance handle: " + instance.to_string())

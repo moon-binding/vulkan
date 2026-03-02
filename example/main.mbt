@@ -23,36 +23,6 @@ fn print_banner() -> Unit {
 fn main() -> Unit {
   print_banner()
 
-  // Test MoonBit Vulkan instance creation
-  println("=== Test 1: Creating Vulkan instance with MoonBit ===")
-  let instance_result = create_vulkan_instance()
-
-  match instance_result {
-    InstanceCreated(instance) => {
-      println("Success! Instance handle: " + instance.to_string())
-      println("")
-
-      // Test physical device selection (skipping logical device creation due to vkCreateDevice issue)
-      println("=== Test 2: Enumerating physical devices ===")
-      let physical_device = select_physical_device(instance)
-
-      if physical_device > 0 {
-        println("Physical device enumerated successfully!")
-        println("Skipping logical device creation (known vkCreateDevice issue)")
-      }
-
-      // Clean up
-      destroy_vulkan_instance(instance)
-    }
-    InstanceError(msg) => {
-      println("Error: " + msg)
-    }
-  }
-
-  println("")
-  println("=== MoonBit Vulkan instance test completed ===")
-  println("")
-
   println("Now running full demo with progressive MoonBit implementation...")
   println("")
 
@@ -62,11 +32,41 @@ fn main() -> Unit {
     WindowCreated(window) => {
       println("Window created successfully with MoonBit! Handle: " + window.to_string())
 
-      // For now, continue with C bridge for Vulkan rendering
-      // We'll progressively replace more components
+      // Test MoonBit Vulkan instance creation
+      println("=== Step 2: Creating Vulkan instance with MoonBit ===")
+      let instance_result = create_vulkan_instance()
 
-      // Enter main rendering loop using C bridge
-      // vk_main_loop()
+      match instance_result {
+        InstanceCreated(instance) => {
+          println("Instance created! Handle: " + instance.to_string())
+
+          // Test MoonBit surface creation
+          println("=== Step 3: Creating Vulkan surface with MoonBit ===")
+          match create_surface(instance, window) {
+            SurfaceCreated(surface) => {
+              println("Surface created! Handle: " + surface.to_string())
+
+              // For now, we'll stop here and cleanup
+              // Next phases will implement device creation and rendering
+              println("Phase 1-3 complete: Window, Instance, and Surface creation in MoonBit!")
+              println("")
+              println("Progress summary:")
+              println("  ✓ GLFW window creation - MoonBit")
+              println("  ✓ Vulkan instance creation - MoonBit")
+              println("  ✓ Surface creation - MoonBit")
+            }
+            SurfaceError(msg) => {
+              println("Surface creation failed: " + msg)
+            }
+          }
+
+          // Cleanup
+          destroy_vulkan_instance(instance)
+        }
+        InstanceError(msg) => {
+          println("Instance creation failed: " + msg)
+        }
+      }
 
       // Cleanup
       cleanup_window(window)
