@@ -566,52 +566,84 @@ int32_t vulkan_vkCreateDeviceDirectSimple(int64_t physical_device, int32_t queue
     VkPhysicalDevice pd = (VkPhysicalDevice)(uintptr_t)physical_device;
     void* device_buffer = index_to_ptr(device_idx);
 
-    // Allocate queue create info on heap
-    float* queue_priority = (float*)malloc(sizeof(float));
-    *queue_priority = 1.0f;
-    
-    VkDeviceQueueCreateInfo* queue_ci = (VkDeviceQueueCreateInfo*)malloc(sizeof(VkDeviceQueueCreateInfo));
-    memset(queue_ci, 0, sizeof(VkDeviceQueueCreateInfo));
-    queue_ci->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queue_ci->pNext = NULL;
-    queue_ci->flags = 0;
-    queue_ci->queueFamilyIndex = (uint32_t)queue_family;
-    queue_ci->queueCount = 1;
-    queue_ci->pQueuePriorities = queue_priority;
+    // Use stack memory for queue priority (more reliable)
+    float queue_priority = 1.0f;
 
-    // Create device create info on heap - NO EXTENSIONS
-    VkDeviceCreateInfo* device_ci = (VkDeviceCreateInfo*)malloc(sizeof(VkDeviceCreateInfo));
-    memset(device_ci, 0, sizeof(VkDeviceCreateInfo));
-    device_ci->sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_ci->pNext = NULL;
-    device_ci->flags = 0;
-    device_ci->queueCreateInfoCount = 1;
-    device_ci->pQueueCreateInfos = queue_ci;
-    device_ci->enabledLayerCount = 0;
-    device_ci->ppEnabledLayerNames = NULL;
-    device_ci->enabledExtensionCount = 0;  // NO EXTENSIONS
-    device_ci->ppEnabledExtensionNames = NULL;
-    device_ci->pEnabledFeatures = VK_NULL_HANDLE;
+    // Use stack memory for queue create info
+    VkDeviceQueueCreateInfo queue_ci;
+    memset(&queue_ci, 0, sizeof(VkDeviceQueueCreateInfo));
+    queue_ci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_ci.pNext = NULL;
+    queue_ci.flags = 0;
+    queue_ci.queueFamilyIndex = (uint32_t)queue_family;
+    queue_ci.queueCount = 1;
+    queue_ci.pQueuePriorities = &queue_priority;
 
-    printf("  Calling vkCreateDevice (no extensions)...\n");
+    // Get physical device features (we'll use them in pEnabledFeatures)
+    VkPhysicalDeviceFeatures deviceFeatures;
+    memset(&deviceFeatures, 0, sizeof(VkPhysicalDeviceFeatures));
+    // Note: We're not querying the device features, just using an empty struct
+
+    // Use stack memory for device create info - minimal setup
+    VkDeviceCreateInfo device_ci;
+    memset(&device_ci, 0, sizeof(VkDeviceCreateInfo));
+    device_ci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_ci.pNext = NULL;
+    device_ci.flags = 0;
+    device_ci.queueCreateInfoCount = 1;
+    device_ci.pQueueCreateInfos = &queue_ci;
+    device_ci.enabledLayerCount = 0;
+    device_ci.ppEnabledLayerNames = NULL;
+    device_ci.enabledExtensionCount = 0;  // No extensions for now
+    device_ci.ppEnabledExtensionNames = NULL;
+    device_ci.pEnabledFeatures = &deviceFeatures;
+
+    printf("  Calling vkCreateDevice (minimal setup, no extensions)...\n");
+    printf("  VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO = %d\n", VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
+    printf("  VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO = %d\n", VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO);
     printf("  physical_device: %p\n", (void*)pd);
-    printf("  device_ci.sType: %u\n", device_ci->sType);
-    printf("  device_ci.pQueueCreateInfos: %p\n", (void*)device_ci->pQueueCreateInfos);
+    printf("  device_ci.sType: %u\n", device_ci.sType);
+    printf("  device_ci.pNext: %p\n", (void*)device_ci.pNext);
+    printf("  device_ci.flags: %u\n", device_ci.flags);
+    printf("  device_ci.queueCreateInfoCount: %u\n", device_ci.queueCreateInfoCount);
+    printf("  device_ci.pQueueCreateInfos: %p\n", (void*)device_ci.pQueueCreateInfos);
+    printf("  device_ci.enabledLayerCount: %u\n", device_ci.enabledLayerCount);
+    printf("  device_ci.enabledExtensionCount: %u\n", device_ci.enabledExtensionCount);
+    printf("  device_ci.pEnabledFeatures: %p\n", (void*)device_ci.pEnabledFeatures);
+    printf("  queue_ci.sType: %u\n", queue_ci.sType);
+    printf("  queue_ci.queueFamilyIndex: %u\n", queue_ci.queueFamilyIndex);
+    printf("  queue_ci.queueCount: %u\n", queue_ci.queueCount);
+    printf("  queue_ci.pQueuePriorities: %p\n", (void*)queue_ci.pQueuePriorities);
+    printf("  *queue_ci.pQueuePriorities: %f\n", *queue_ci.pQueuePriorities);
     printf("  device_buffer: %p\n", device_buffer);
     fflush(stdout);
 
-    VkResult result = vkCreateDevice(pd, (const VkDeviceCreateInfo*)device_ci, NULL, (VkDevice*)device_buffer);
-
-    printf("  vkCreateDevice result: %d\n", result);
-    if (result == VK_SUCCESS) {
-        printf("  Device created successfully: %p\n", *(void**)device_buffer);
-    }
+    printf("  About to call vkCreateDevice...\n");
     fflush(stdout);
 
-    // Clean up
-    free(queue_ci);
-    free(queue_priority);
-    free(device_ci);
+    // Check if physical device is valid
+    if (pd == NULL) {
+        printf("  ERROR: physical device is NULL!\n");
+        return (int32_t)VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Check if device buffer is valid
+    if (device_buffer == NULL) {
+        printf("  ERROR: device buffer is NULL!\n");
+        return (int32_t)VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    VkResult result = vkCreateDevice(pd, &device_ci, NULL, (VkDevice*)device_buffer);
+
+    printf("  vkCreateDevice returned with result: %d\n", result);
+    fflush(stdout);
+
+    if (result == VK_SUCCESS) {
+        printf("  Device created successfully: %p\n", *(void**)device_buffer);
+    } else {
+        printf("  Failed to create device, error: %d\n", result);
+    }
+    fflush(stdout);
 
     return (int32_t)result;
 }
