@@ -425,6 +425,129 @@ int64_t moonbit_vk_find_queue_families_bridge(int64_t physicalDevice, int64_t su
     return ((int64_t)presentFamily << 32) | graphicsFamily;
 }
 
+// Bridge function for MoonBit swapchain creation
+int64_t moonbit_vk_create_swapchain_bridge(int64_t physicalDevice, int64_t device, int64_t surface) {
+    printf("Creating swapchain (bridge)\n");
+    printf("  Physical device: %p\n", (void*)physicalDevice);
+    printf("  Device: %p\n", (void*)device);
+    printf("  Surface: %p\n", (void*)surface);
+
+    VkSurfaceCapabilitiesKHR caps;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR((VkPhysicalDevice)physicalDevice, (VkSurfaceKHR)surface, &caps);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR((VkPhysicalDevice)physicalDevice, (VkSurfaceKHR)surface, &formatCount, NULL);
+    VkSurfaceFormatKHR* formats = malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    vkGetPhysicalDeviceSurfaceFormatsKHR((VkPhysicalDevice)physicalDevice, (VkSurfaceKHR)surface, &formatCount, formats);
+
+    uint32_t modeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR((VkPhysicalDevice)physicalDevice, (VkSurfaceKHR)surface, &modeCount, NULL);
+    VkPresentModeKHR* modes = malloc(modeCount * sizeof(VkPresentModeKHR));
+    vkGetPhysicalDeviceSurfacePresentModesKHR((VkPhysicalDevice)physicalDevice, (VkSurfaceKHR)surface, &modeCount, modes);
+
+    // Choose swap surface format
+    VkSurfaceFormatKHR surfaceFormat = formats[0];
+    for (uint32_t i = 0; i < formatCount; i++) {
+        if (formats[i].format == VK_FORMAT_B8G8R8A8_SRGB &&
+            formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            surfaceFormat = formats[i];
+            break;
+        }
+    }
+
+    // Choose present mode
+    VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    for (uint32_t i = 0; i < modeCount; i++) {
+        if (modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+            presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+            break;
+        }
+    }
+
+    // Choose extent
+    VkExtent2D extent = caps.currentExtent;
+    if (extent.width == UINT32_MAX) {
+        extent.width = (caps.minImageExtent.width > caps.maxImageExtent.width) ?
+                       caps.maxImageExtent.width : caps.minImageExtent.width;
+        extent.height = (caps.minImageExtent.height > caps.maxImageExtent.height) ?
+                        caps.maxImageExtent.height : caps.minImageExtent.height;
+    }
+
+    printf("  Selected format: %u\n", surfaceFormat.format);
+    printf("  Selected extent: %ux%u\n", extent.width, extent.height);
+    printf("  Present mode: %u\n", presentMode);
+
+    uint32_t imageCount = caps.minImageCount + 1;
+    if (caps.maxImageCount > 0 && imageCount > caps.maxImageCount) {
+        imageCount = caps.maxImageCount;
+    }
+
+    printf("  Image count: %u\n", imageCount);
+
+    VkSwapchainCreateInfoKHR createInfo = {0};
+    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    createInfo.surface = (VkSurfaceKHR)surface;
+    createInfo.minImageCount = imageCount;
+    createInfo.imageFormat = surfaceFormat.format;
+    createInfo.imageColorSpace = surfaceFormat.colorSpace;
+    createInfo.imageExtent = extent;
+    createInfo.imageArrayLayers = 1;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.preTransform = caps.currentTransform;
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.presentMode = presentMode;
+    createInfo.clipped = VK_TRUE;
+    createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    VkResult result = vkCreateSwapchainKHR((VkDevice)device, &createInfo, NULL, &swapchain);
+
+    free(formats);
+    free(modes);
+
+    if (!check_vk_result(result, "Failed to create swapchain (bridge)")) {
+        return 0;
+    }
+
+    printf("Swapchain created (bridge)\n");
+
+    // Store swapchain info in a global structure for later retrieval
+    // For simplicity, we return the swapchain handle and image count packed
+    // Lower 48 bits: swapchain handle, upper 16 bits: image count (limited to 65535)
+    if (imageCount > 65535) {
+        fprintf(stderr, "Image count too large to pack\n");
+        return 0;
+    }
+
+    return ((int64_t)imageCount << 48) | (int64_t)swapchain;
+}
+
+// Bridge function to get swapchain images
+int64_t moonbit_vk_get_swapchain_images_bridge(int64_t device, int64_t swapchain) {
+    printf("Getting swapchain images (bridge)\n");
+
+    uint32_t imageCount = 0;
+    vkGetSwapchainImagesKHR((VkDevice)device, (VkSwapchainKHR)swapchain, &imageCount, NULL);
+
+    printf("  Image count: %u\n", imageCount);
+
+    VkImage* images = malloc(imageCount * sizeof(VkImage));
+    vkGetSwapchainImagesKHR((VkDevice)device, (VkSwapchainKHR)swapchain, &imageCount, images);
+
+    // Return pointer to images array
+    printf("Swapchain images retrieved (bridge)\n");
+    return (int64_t)images;
+}
+
+// Bridge function to destroy swapchain
+int moonbit_vk_destroy_swapchain_bridge(int64_t device, int64_t swapchain) {
+    printf("Destroying swapchain (bridge)\n");
+    vkDestroySwapchainKHR((VkDevice)device, (VkSwapchainKHR)swapchain, NULL);
+    printf("Swapchain destroyed (bridge)\n");
+    return 1;
+}
+
 // ============== Swapchain ==============
 
 static VkSurfaceFormatKHR choose_swap_surface_format(VkSurfaceFormatKHR* formats, uint32_t count) {

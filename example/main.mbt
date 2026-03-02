@@ -67,16 +67,31 @@ fn main() -> Unit {
                   if device > 0 {
                     println("Logical device created! Handle: " + device.to_string())
 
-                    println("")
-                    println("Progress summary:")
-                    println("  ✓ GLFW window creation - MoonBit")
-                    println("  ✓ Vulkan instance creation - MoonBit")
-                    println("  ✓ Surface creation - MoonBit")
-                    println("  ✓ Physical device selection - MoonBit")
-                    println("  ✓ Queue family enumeration - MoonBit")
-                    println("  ✓ Logical device creation - MoonBit")
-                    println("")
-                    println("Phase 1-6 complete!")
+                    // Create swapchain
+                    println("=== Step 7: Creating swapchain ===")
+                    match create_swapchain(physical_device, device, surface) {
+                      SwapchainCreated(swapchain, image_count, width, height, format) => {
+                        println("Swapchain created! Handle: " + swapchain.to_string())
+
+                        println("")
+                        println("Progress summary:")
+                        println("  ✓ GLFW window creation - MoonBit")
+                        println("  ✓ Vulkan instance creation - MoonBit")
+                        println("  ✓ Surface creation - MoonBit")
+                        println("  ✓ Physical device selection - MoonBit")
+                        println("  ✓ Queue family enumeration - MoonBit")
+                        println("  ✓ Logical device creation - MoonBit")
+                        println("  ✓ Swapchain creation - MoonBit")
+                        println("")
+                        println("Phase 1-7 complete!")
+
+                        // Cleanup swapchain
+                        destroy_swapchain(device, swapchain)
+                      }
+                      SwapchainError(msg) => {
+                        println("Failed to create swapchain: " + msg)
+                      }
+                    }
                   } else {
                     println("Failed to create logical device")
                   }
