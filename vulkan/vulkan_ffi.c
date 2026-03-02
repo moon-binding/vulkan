@@ -704,6 +704,10 @@ void vulkan_vkDestroySwapchainKHR(int64_t device, int64_t swapchain, int32_t all
 
 // vkCreateDevice wrapper
 int32_t vulkan_vkCreateDevice(int64_t physical_device, int32_t create_info_idx, int32_t allocator, int32_t device_idx) {
+    printf("DEBUG: vkCreateDevice called\n");
+    printf("  physical_device=%p, create_info_idx=%d, device_idx=%d\n", (void*)(uintptr_t)physical_device, create_info_idx, device_idx);
+    fflush(stdout);
+    
     VkPhysicalDevice phys_dev = (VkPhysicalDevice)(uintptr_t)physical_device;
     VkDeviceCreateInfo* create_info = (VkDeviceCreateInfo*)index_to_ptr(create_info_idx);
     
@@ -711,15 +715,49 @@ int32_t vulkan_vkCreateDevice(int64_t physical_device, int32_t create_info_idx, 
         fprintf(stderr, "ERROR: Invalid create_info pointer\n");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
+    
+    printf("  create_info->sType=%d\n", create_info->sType);
+    printf("  create_info->queueCreateInfoCount=%u\n", create_info->queueCreateInfoCount);
+    printf("  create_info->pQueueCreateInfos (as int64)=%ld\n", (int64_t)create_info->pQueueCreateInfos);
+    printf("  create_info->enabledExtensionCount=%u\n", create_info->enabledExtensionCount);
+    printf("  create_info->ppEnabledExtensionNames (as int64)=%ld\n", (int64_t)create_info->ppEnabledExtensionNames);
+    fflush(stdout);
+    
+    // Convert index-based pointers to actual pointers
+    // The pointer values are actually indices stored as int64, convert them to actual pointers
+    int32_t queues_idx = (int32_t)(intptr_t)create_info->pQueueCreateInfos;
+    if (queues_idx >= 0) {
+        void* queues_ptr = index_to_ptr(queues_idx);
+        create_info->pQueueCreateInfos = (VkDeviceQueueCreateInfo*)queues_ptr;
+        printf("  Converted queues_idx=%d to queues_ptr=%p\n", queues_idx, queues_ptr);
+    }
+    
+    int32_t extensions_idx = (int32_t)(intptr_t)create_info->ppEnabledExtensionNames;
+    if (extensions_idx >= 0) {
+        void* extensions_ptr = index_to_ptr(extensions_idx);
+        create_info->ppEnabledExtensionNames = (const char* const*)extensions_ptr;
+        printf("  Converted extensions_idx=%d to extensions_ptr=%p\n", extensions_idx, extensions_ptr);
+    }
+    
+    printf("  After conversion:\n");
+    printf("    queueCreateInfoCount=%u, pQueueCreateInfos=%p\n", create_info->queueCreateInfoCount, (void*)create_info->pQueueCreateInfos);
+    printf("    enabledExtensionCount=%u, ppEnabledExtensionNames=%p\n", create_info->enabledExtensionCount, (void*)create_info->ppEnabledExtensionNames);
+    fflush(stdout);
 
     VkDevice device;
     VkResult result = vkCreateDevice(phys_dev, create_info, NULL, &device);
+    
+    printf("  vkCreateDevice returned: %d\n", result);
+    printf("  device created: %p\n", (void*)device);
+    fflush(stdout);
 
     if (result == VK_SUCCESS && device) {
         // Store the device handle at the given index
         int32_t* device_ptr = (int32_t*)index_to_ptr(device_idx);
         if (device_ptr) {
             *device_ptr = ptr_to_index((void*)device);
+            printf("  device handle stored at index %d\n", device_idx);
+            fflush(stdout);
         }
     }
 

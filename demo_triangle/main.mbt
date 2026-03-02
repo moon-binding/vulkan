@@ -201,25 +201,31 @@ fn main() -> Unit {
   let mut graphics_queue_family = -1
   let mut present_queue_family = -1
 
+  println("Searching for queue families...")
   let mut i = 0
   while i < queue_family_count {
     let offset = i * 32
     let queue_flags = @moonbit/vulkan.get_int32(queue_family_properties_ptr, offset)
+    println("  Queue family " + i.to_string() + ": flags = 0x" + queue_flags.to_string())
 
     if (queue_flags & 1) != 0 && graphics_queue_family < 0 {
       graphics_queue_family = i
+      println("    -> Graphics queue found at family " + i.to_string())
     }
 
     // Check presentation support
     let present_support_ptr = @moonbit/vulkan.vulkan_alloc_struct(4)
     @moonbit/vulkan.vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, present_support_ptr) |> ignore
     let present_support = @moonbit/vulkan.get_int32(present_support_ptr, 0)
+    println("    -> Present support: " + present_support.to_string())
 
     if present_support != 0 && present_queue_family < 0 {
       present_queue_family = i
+      println("    -> Present queue found at family " + i.to_string())
     }
 
     if graphics_queue_family >= 0 && present_queue_family >= 0 {
+      println("  Both queues found, stopping search")
       break
     }
 
@@ -246,21 +252,37 @@ fn main() -> Unit {
   // First, allocate queue priorities (float = 1.0)
   let queue_priorities = @moonbit/vulkan.vulkan_alloc_struct(4)
   @moonbit/vulkan.vulkan_set_float(queue_priorities, 0, 1.0)
+  
+  println("Queue priorities allocated at: " + queue_priorities.to_string())
 
   // Allocate and set device queue create info
   let queue_info = @moonbit/vulkan.alloc_device_queue_create_info()
   @moonbit/vulkan.set_queue_family_index(queue_info, graphics_queue_family)
+  @moonbit/vulkan.set_queue_count(queue_info, 1)  // Explicitly set queue count
   @moonbit/vulkan.set_queue_priorities(queue_info, queue_priorities)
+  
+  println("Queue info allocated at: " + queue_info.to_string())
+
+  // Allocate array of queue create infos
+  let queues_array = @moonbit/vulkan.vulkan_alloc_struct(8)  // Array of 1 pointer = 8 bytes
+  @moonbit/vulkan.set_array_ptr(queues_array, 0, queue_info)
+  
+  println("Queues array allocated at: " + queues_array.to_string())
 
   // Allocate and set device create info
   let device_info = @moonbit/vulkan.alloc_device_create_info()
-  @moonbit/vulkan.set_device_queues(device_info, 1, queue_info)
+  @moonbit/vulkan.set_device_queues(device_info, 1, queues_array)
 
   // Enable VK_KHR_swapchain extension
   // For simplicity, we'll use a pointer index system
   // The extension name string will be handled by the C wrapper
   let ext_name_ptr = @moonbit/vulkan.vulkan_create_string("VK_KHR_swapchain")
-  @moonbit/vulkan.set_device_extensions(device_info, 1, ext_name_ptr)
+  
+  // Create an array of extension name pointers
+  let extensions_array = @moonbit/vulkan.vulkan_alloc_struct(8)  // Array of 1 pointer = 8 bytes
+  @moonbit/vulkan.set_array_ptr(extensions_array, 0, ext_name_ptr)
+  
+  @moonbit/vulkan.set_device_extensions(device_info, 1, extensions_array)
 
   let device_ptr = @moonbit/vulkan.vulkan_alloc_struct(8)
   let device_result = @moonbit/vulkan.vkCreateDevice(physical_device, device_info, 0, device_ptr)

@@ -140,8 +140,13 @@ pub fn set_device_queues(create_info : Int, count : Int, queues : Int) -> Unit {
 
 // Set device extensions
 pub fn set_device_extensions(create_info : Int, count : Int, names : Int) -> Unit {
-  put_int32(create_info, 56, count)
-  put_int64(create_info, 64, names)
+  put_int32(create_info, 48, count)
+  put_int64(create_info, 56, names)
+}
+
+// Set pointer in array (helper for setting extension names)
+pub fn set_array_ptr(array : Int, index : Int, ptr_idx : Int) -> Unit {
+  put_ptr(array, index * 8, ptr_idx)
 }
 
 // Allocate and initialize VkSwapchainCreateInfoKHR
