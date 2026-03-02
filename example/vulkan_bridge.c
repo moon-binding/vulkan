@@ -548,6 +548,68 @@ int moonbit_vk_destroy_swapchain_bridge(int64_t device, int64_t swapchain) {
     return 1;
 }
 
+// Bridge function for MoonBit image views creation
+int64_t moonbit_vk_create_image_views_bridge(int64_t device, int64_t swapchain, int format, int imageCount) {
+    printf("Creating image views (bridge)\n");
+    printf("  Device: %p\n", (void*)device);
+    printf("  Swapchain: %p\n", (void*)swapchain);
+    printf("  Format: %d\n", format);
+    printf("  Image count: %d\n", imageCount);
+
+    // Get swapchain images
+    uint32_t swapchainImageCount = 0;
+    vkGetSwapchainImagesKHR((VkDevice)device, (VkSwapchainKHR)swapchain, &swapchainImageCount, NULL);
+
+    VkImage* swapchainImages = malloc(swapchainImageCount * sizeof(VkImage));
+    vkGetSwapchainImagesKHR((VkDevice)device, (VkSwapchainKHR)swapchain, &swapchainImageCount, swapchainImages);
+
+    // Create image views
+    VkImageView* swapchainImageViews = malloc(swapchainImageCount * sizeof(VkImageView));
+
+    for (uint32_t i = 0; i < swapchainImageCount; i++) {
+        VkImageViewCreateInfo createInfo = {0};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image = swapchainImages[i];
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = (VkFormat)format;
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        VkResult result = vkCreateImageView((VkDevice)device, &createInfo, NULL, &swapchainImageViews[i]);
+        if (!check_vk_result(result, "Failed to create image view (bridge)")) {
+            free(swapchainImages);
+            free(swapchainImageViews);
+            return 0;
+        }
+    }
+
+    free(swapchainImages);
+
+    printf("Image views created (bridge)\n");
+    return (int64_t)swapchainImageViews;
+}
+
+// Bridge function to destroy image views
+int moonbit_vk_destroy_image_views_bridge(int64_t device, int64_t imageViews, int imageCount) {
+    printf("Destroying image views (bridge)\n");
+
+    VkImageView* views = (VkImageView*)imageViews;
+    for (int i = 0; i < imageCount; i++) {
+        vkDestroyImageView((VkDevice)device, views[i], NULL);
+    }
+
+    free(views);
+    printf("Image views destroyed (bridge)\n");
+    return 1;
+}
+
 // ============== Swapchain ==============
 
 static VkSurfaceFormatKHR choose_swap_surface_format(VkSurfaceFormatKHR* formats, uint32_t count) {

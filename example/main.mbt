@@ -73,17 +73,32 @@ fn main() -> Unit {
                       SwapchainCreated(swapchain, image_count, width, height, format) => {
                         println("Swapchain created! Handle: " + swapchain.to_string())
 
-                        println("")
-                        println("Progress summary:")
-                        println("  ✓ GLFW window creation - MoonBit")
-                        println("  ✓ Vulkan instance creation - MoonBit")
-                        println("  ✓ Surface creation - MoonBit")
-                        println("  ✓ Physical device selection - MoonBit")
-                        println("  ✓ Queue family enumeration - MoonBit")
-                        println("  ✓ Logical device creation - MoonBit")
-                        println("  ✓ Swapchain creation - MoonBit")
-                        println("")
-                        println("Phase 1-7 complete!")
+                        // Create image views
+                        println("=== Step 8: Creating image views ===")
+                        match create_image_views(device, swapchain, format, image_count) {
+                          ImageViewsCreated(image_views, _) => {
+                            println("Image views created! Pointer: " + image_views.to_string())
+
+                            println("")
+                            println("Progress summary:")
+                            println("  ✓ GLFW window creation - MoonBit")
+                            println("  ✓ Vulkan instance creation - MoonBit")
+                            println("  ✓ Surface creation - MoonBit")
+                            println("  ✓ Physical device selection - MoonBit")
+                            println("  ✓ Queue family enumeration - MoonBit")
+                            println("  ✓ Logical device creation - MoonBit")
+                            println("  ✓ Swapchain creation - MoonBit")
+                            println("  ✓ Image views creation - MoonBit")
+                            println("")
+                            println("Phase 1-8 complete!")
+
+                            // Cleanup image views
+                            destroy_image_views(device, image_views, image_count)
+                          }
+                          ImageViewsError(msg) => {
+                            println("Failed to create image views: " + msg)
+                          }
+                        }
 
                         // Cleanup swapchain
                         destroy_swapchain(device, swapchain)
